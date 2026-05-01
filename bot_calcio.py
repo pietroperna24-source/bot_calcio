@@ -94,7 +94,7 @@ if 'logged_in' not in st.session_state:
 if not st.session_state.logged_in:
     cols = st.columns([1, 1.5, 1])
     with cols[1]:
-        st.title("🧠 Neural Bet Engine")
+        st.title("🧠 Motore di Analisi Neurale")
         tab1, tab2 = st.tabs(["🔑 Login", "📝 Registrazione"])
         
         with tab1:
