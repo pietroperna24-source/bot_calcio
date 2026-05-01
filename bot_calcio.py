@@ -61,7 +61,6 @@ EURO_DB = {
         "Villarreal": {"pw": 84, "miss": [], "f": "WWLDW", "style": [8,6,8,6,8], "color": "#ffe600"},
         "Sevilla": {"pw": 79, "miss": [], "f": "WLDLW", "style": [7,7,7,7,7], "color": "#ffffff"},
         "Valencia": {"pw": 76, "miss": [], "f": "LLDWD", "style": [6,8,6,7,7], "color": "#ffffff"}
-        # ... Altre squadre incluse nel caricamento dinamico
     }
 }
 
@@ -78,10 +77,23 @@ def get_analysis(h, a, league):
     probs = [pw_h/total, 25/total, pw_a/total]
     return probs, health_h, health_a
 
-# --- 3. UI LAYOUT ---
-st.set_page_config(page_title="NEURAL COMMANDER", layout="wide")
+# --- 3. UI LAYOUT & CSS ---
+st.set_page_config(page_title="AI NEURAL COMMANDER", layout="wide")
+
+# CSS Iniettato per nascondere la barra in alto a destra e pulire l'interfaccia
 st.markdown("""
     <style>
+    /* Nasconde il menu di Streamlit (hamburger), l'header e il footer */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Riduce il padding superiore per compensare la barra nascosta */
+    .block-container {
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+
     .stApp { background-color: #05070a; color: #e0e0e0; }
     .vs-text { font-size: 3.5rem; font-weight: 900; color: #3b82f6; text-align: center; }
     </style>
