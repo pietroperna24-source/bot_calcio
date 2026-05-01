@@ -51,10 +51,22 @@ class NeuralEngine:
             return "✅ ALTA PROBABILITÀ CASA", "#88ccff"
         return "⚠️ RISCHIO / EQUILIBRIO", "#ffaa00"
 
-# --- 3. STILE CSS CUSTOM ---
+# --- 3. STILE CSS CUSTOM (Include rimozione Menu e Footer) ---
 st.markdown("""
     <style>
+    /* Nasconde il menu (tre linee), l'header e il footer di Streamlit */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Riduce lo spazio bianco in alto */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
     .stApp { background: #0e1117; }
+    
     .main-card { 
         background: #161b22; 
         border-radius: 15px; 
@@ -62,6 +74,7 @@ st.markdown("""
         border: 1px solid #30363d; 
         margin-bottom: 20px;
     }
+    
     .fav-card {
         background: #1c2128;
         padding: 15px;
