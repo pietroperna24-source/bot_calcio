@@ -4,7 +4,41 @@ import random
 import plotly.graph_objects as go
 from datetime import datetime
 
-# --- 1. DATABASE INTEGRALE EUROPA 2026 (98 SQUADRE) ---
+# --- 1. CONFIGURAZIONE PAGINA (DA METTERE IN CIMA) ---
+st.set_page_config(page_title="AI NEURAL COMMANDER PRO", layout="wide", initial_sidebar_state="collapsed")
+
+# --- 2. CSS PER NASCONDERE HEADER E PULIRE L'INTERFACCIA ---
+st.markdown("""
+    <style>
+    /* Nasconde header di sistema e footer */
+    header[data-testid="stHeader"] { visibility: hidden; height: 0px; }
+    footer { visibility: hidden; }
+    #MainMenu { visibility: hidden; }
+    
+    .stApp { background-color: #05070a; color: #e0e0e0; }
+    .vs-text { font-size: 3.5rem; font-weight: 900; color: #3b82f6; text-align: center; margin-top: 20px; }
+    
+    /* Box stile Dashboard per i menu */
+    .main-panel {
+        background: rgba(30, 41, 59, 0.3);
+        padding: 25px;
+        border-radius: 15px;
+        border: 1px solid #1e293b;
+        margin-bottom: 20px;
+    }
+    
+    /* Etichetta fissa in alto a destra */
+    .custom-label {
+        position: fixed; top: 10px; right: 20px; z-index: 1000;
+        color: #3b82f6; background: rgba(15, 23, 42, 0.9);
+        padding: 5px 15px; border: 1px solid #3b82f6; border-radius: 8px;
+        font-weight: bold; font-size: 11px; letter-spacing: 1px;
+    }
+    </style>
+    <div class="custom-label">🛰️ NEURAL SERVER 2026 ONLINE</div>
+""", unsafe_allow_html=True)
+
+# --- 3. DATABASE INTEGRALE EUROPA (Tutte le squadre principali) ---
 EURO_DB = {
     "Serie A 🇮🇹": {
         "Atalanta": {"pw": 86, "miss": ["Scamacca (I)"], "f": "WWWLD", "style": [9,6,8,7,9], "color": "#00539c"},
@@ -38,110 +72,94 @@ EURO_DB = {
         "Tottenham": {"pw": 86, "miss": ["Son (I)"], "f": "DWLWW", "style": [9,6,8,6,10], "color": "#132257"}
     },
     "La Liga 🇪🇸": {
-        "Atletico Madrid": {"pw": 90, "miss": ["De Paul (I)"], "f": "WWDLD", "style": [7,10,7,10,7], "color": "#cb3524"},
         "Barcelona": {"pw": 94, "miss": ["Gavi (I)"], "f": "WWWLW", "style": [9,6,10,6,8], "color": "#a50044"},
         "Real Madrid": {"pw": 98, "miss": ["Courtois (I)"], "f": "WWWWD", "style": [10,8,9,8,10], "color": "#ffffff"},
-        "Girona": {"pw": 84, "miss": [], "f": "LWWDL", "style": [9,6,9,6,8], "color": "#e2362c"},
-        "Real Sociedad": {"pw": 83, "miss": [], "f": "LDWWD", "style": [7,8,9,7,7], "color": "#0067b1"}
+        "Atletico Madrid": {"pw": 90, "miss": ["De Paul (I)"], "f": "WWDLD", "style": [7,10,7,10,7], "color": "#cb3524"},
+        "Villarreal": {"pw": 84, "miss": [], "f": "WWLDW", "style": [8,6,8,6,8], "color": "#ffe600"}
     }
 }
 
-# --- 2. ENGINE ANALITICO ---
+# --- 4. ENGINE ANALITICO ---
 def get_analysis(h, a, league):
     sh, sa = EURO_DB[league][h], EURO_DB[league][a]
     health_h = max(10, 100 - (len(sh['miss']) * 15))
     health_a = max(10, 100 - (len(sa['miss']) * 15))
-    
     pw_h = (sh['pw'] * (health_h/100)) + 5 
     pw_a = (sa['pw'] * (health_a/100))
-    
     total = pw_h + pw_a + 25
     probs = [pw_h/total, 25/total, pw_a/total]
     return probs, health_h, health_a
 
-# --- 3. UI LAYOUT & CSS ---
-st.set_page_config(page_title="AI NEURAL COMMANDER", layout="wide")
-
-st.markdown("""
-    <style>
-    /* Nasconde header e footer senza bloccare la sidebar */
-    header[data-testid="stHeader"] { visibility: hidden; height: 0px; }
-    footer { visibility: hidden; }
-    
-    /* Etichetta fissa in alto a destra */
-    .custom-label {
-        position: fixed;
-        top: 10px;
-        right: 20px;
-        z-index: 1000;
-        color: #3b82f6;
-        background: rgba(15, 23, 42, 0.8);
-        padding: 5px 15px;
-        border: 1px solid #3b82f6;
-        border-radius: 8px;
-        font-family: sans-serif;
-        font-weight: bold;
-        font-size: 12px;
-        letter-spacing: 1px;
-    }
-
-    .stApp { background-color: #05070a; color: #e0e0e0; }
-    .vs-text { font-size: 3.5rem; font-weight: 900; color: #3b82f6; text-align: center; margin-top: 10px; }
-    .block-container { padding-top: 2rem; }
-    </style>
-    <div class="custom-label">📂 CATALOGO ATTIVO</div>
-""", unsafe_allow_html=True)
-
-# --- 4. SIDEBAR (CATALOGO) ---
-with st.sidebar:
-    st.title("📂 CATALOGO")
-    st.markdown("---")
-    sel_league = st.selectbox("Campionato", list(EURO_DB.keys()))
-    
-    st.subheader("🎮 Match Control")
-    teams = sorted(list(EURO_DB[sel_league].keys()))
-    h_team = st.selectbox("Casa", teams, index=0)
-    a_team = st.selectbox("Trasferta", teams, index=1 if len(teams) > 1 else 0)
-    
-    st.divider()
-    analyze_btn = st.button("🔥 GENERA REPORT", use_container_width=True)
-
-# --- 5. MAIN LOGIC ---
+# --- 5. LOGICA INTERFACCIA (CENTRALE) ---
 st.title("⚡ AI NEURAL COMMANDER 2026")
 
-if analyze_btn:
-    if h_team == a_team:
-        st.error("Seleziona squadre diverse.")
-    else:
-        with st.status("🧬 Analisi in corso...", expanded=True) as status:
-            time.sleep(0.5); st.write("📥 Accesso database..."); time.sleep(0.5)
-            status.update(label="Analisi Completata!", state="complete")
+tab_analysis, tab_reg = st.tabs(["🎮 CENTRALE ANALISI", "👤 REGISTRAZIONE UTENTI"])
 
-        probs, hh, ha = get_analysis(h_team, a_team, sel_league)
-        sh, sa = EURO_DB[sel_league][h_team], EURO_DB[sel_league][a_team]
+with tab_analysis:
+    st.markdown('<div class="main-panel">', unsafe_allow_html=True)
+    st.subheader("📂 Selezione Evento dal Catalogo")
+    
+    col_l, col_h, col_a = st.columns(3)
+    with col_l:
+        sel_league = st.selectbox("Campionato", list(EURO_DB.keys()))
+    
+    teams = sorted(list(EURO_DB[sel_league].keys()))
+    with col_h:
+        h_team = st.selectbox("Squadra in Casa", teams, index=0)
+    with col_a:
+        a_team = st.selectbox("Squadra in Trasferta", teams, index=1 if len(teams) > 1 else 0)
+    
+    st.write("")
+    analyze_btn = st.button("🚀 AVVIA ANALISI NEURALE", use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown(f"<div class='vs-text'>{h_team.upper()} <small>vs</small> {a_team.upper()}</div>", unsafe_allow_html=True)
-        
-        c1, c2, c3 = st.columns([1, 2, 1])
+    if analyze_btn:
+        if h_team == a_team:
+            st.error("Seleziona squadre diverse.")
+        else:
+            with st.status("🧬 Elaborazione dati in corso...", expanded=True) as status:
+                time.sleep(0.6); st.write("📥 Accesso database..."); time.sleep(0.6)
+                status.update(label="Analisi Completata!", state="complete")
 
-        with c1:
-            st.subheader(f"🏠 {h_team}")
-            st.progress(hh/100, text=f"Integrità: {hh}%")
-            fig_r1 = go.Figure(data=go.Scatterpolar(r=sh['style'], theta=['Att','Dif','Pos','Fis','Vel'], fill='toself', line_color=sh['color']))
-            fig_r1.update_layout(polar=dict(bgcolor='#0f172a', radialaxis=dict(visible=False, range=[0, 10])), showlegend=False, height=250, margin=dict(t=30,b=30,l=30,r=30))
-            st.plotly_chart(fig_r1, use_container_width=True)
+            probs, hh, ha = get_analysis(h_team, a_team, sel_league)
+            sh, sa = EURO_DB[sel_league][h_team], EURO_DB[sel_league][a_team]
 
-        with c2:
-            st.subheader("🎯 Probabilità")
-            fig_pie = go.Figure(go.Pie(labels=['1', 'X', '2'], values=probs, hole=.7, marker_colors=[sh['color'], '#222', sa['color']]))
-            fig_pie.update_layout(showlegend=False, height=350, paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_pie, use_container_width=True)
-            st.metric("FIDUCIA AI", f"{max(probs)*100:.1f}%")
-
-        with c3:
-            st.subheader(f"🚌 {a_team}")
-            st.progress(ha/100, text=f"Integrità: {ha}%")
-            fig_r2 = go.Figure(data=go.Scatterpolar(r=sa['style'], theta=['Att','Dif','Pos','Fis','Vel'], fill='toself', line_color=sa['color']))
-            fig_r2.update_layout(polar=dict(bgcolor='#0f172a', radialaxis=dict(visible=False, range=[0, 10])), showlegend=False, height=250, margin=dict(t=30,b=30,l=30,r=30))
-            st.plotly_chart(fig_r2, use_container_width=True)
+            st.markdown(f"<div class='vs-text'>{h_team.upper()} <small>vs</small> {a_team.upper()}</div>", unsafe_allow_html=True)
             
+            c1, c2, c3 = st.columns([1, 2, 1])
+            with c1:
+                st.subheader(h_team)
+                st.progress(hh/100, text=f"Integrità: {hh}%")
+                fig_r1 = go.Figure(data=go.Scatterpolar(r=sh['style'], theta=['Att','Dif','Pos','Fis','Vel'], fill='toself', line_color=sh['color']))
+                fig_r1.update_layout(polar=dict(bgcolor='#0f172a', radialaxis=dict(visible=False, range=[0, 10])), showlegend=False, height=250, margin=dict(t=20,b=20,l=20,r=20))
+                st.plotly_chart(fig_r1, use_container_width=True)
+            with c2:
+                fig_pie = go.Figure(go.Pie(labels=['1', 'X', '2'], values=probs, hole=.7, marker_colors=[sh['color'], '#222', sa['color']]))
+                fig_pie.update_layout(showlegend=False, height=350, paper_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig_pie, use_container_width=True)
+                st.metric("FIDUCIA AI", f"{max(probs)*100:.1f}%")
+            with c3:
+                st.subheader(a_team)
+                st.progress(ha/100, text=f"Integrità: {ha}%")
+                fig_r2 = go.Figure(data=go.Scatterpolar(r=sa['style'], theta=['Att','Dif','Pos','Fis','Vel'], fill='toself', line_color=sa['color']))
+                fig_r2.update_layout(polar=dict(bgcolor='#0f172a', radialaxis=dict(visible=False, range=[0, 10])), showlegend=False, height=250, margin=dict(t=20,b=20,l=20,r=20))
+                st.plotly_chart(fig_r2, use_container_width=True)
+
+with tab_reg:
+    st.markdown('<div class="main-panel">', unsafe_allow_html=True)
+    st.subheader("📝 Iscrizione al Sistema")
+    st.write("Registrati per ricevere alert su Value Bet e formazioni ufficiali in tempo reale.")
+    
+    with st.form("reg_form"):
+        name = st.text_input("Username o Nome")
+        email = st.text_input("Indirizzo Email")
+        choice = st.multiselect("Campionati di interesse", list(EURO_DB.keys()))
+        news = st.checkbox("Accetto di ricevere report settimanali")
+        
+        submitted = st.form_submit_button("CONFERMA ISCRIZIONE")
+        if submitted:
+            if email and name:
+                st.success(f"Benvenuto {name}! Il tuo profilo è ora collegato al database neurale.")
+            else:
+                st.error("Per favore, compila tutti i campi obbligatori.")
+    st.markdown('</div>', unsafe_allow_html=True)
