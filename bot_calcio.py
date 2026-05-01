@@ -6,8 +6,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 
-# --- 1. CONFIGURAZIONE ---
-st.set_page_config(page_title="NEURAL BET AI - RAPID", page_icon="🏆", layout="wide")
+# --- CONFIGURAZIONE ---
+st.set_page_config(page_title="NEURAL BET AI", page_icon="🏆", layout="wide")
 
 def init_db():
     conn = sqlite3.connect('neural_bet_pro.db')
@@ -22,7 +22,7 @@ def hash_pwd(pwd):
 
 init_db()
 
-# --- 2. MOTORE AI ---
+# --- MOTORE AI ---
 class NeuralEngine:
     @staticmethod
     def analyze_market(o1, ox, o2):
@@ -33,21 +33,21 @@ class NeuralEngine:
     @staticmethod
     def get_verdict(p1, o1):
         valore = (o1 * p1) - 1
-        if valore > 0.05: return f"🔥 VALORE: +{valore:.1%}", "#00ff00"
-        return ("✅ ALTA PROBABILITÀ", "#88ccff") if p1 > 0.60 else ("⚠️ RISCHIO", "#ffaa00")
+        if valore > 0.05: return f"🔥 VALORE RILEVATO: +{valore:.1%}", "#00ff00"
+        return ("✅ ALTA PROBABILITÀ", "#88ccff") if p1 > 0.60 else ("⚠️ RISCHIO / EQUILIBRIO", "#ffaa00")
 
-# --- 3. CSS "DEEP CLEAN" ---
+# --- CSS "STEALTH" ---
 st.markdown("""
     <style>
     #MainMenu, header, footer {visibility: hidden; display: none !important;}
     .stAppDeployButton, button[title="Manage app"], [data-testid="stStatusWidget"] {display: none !important;}
     .stApp { background: #0e1117; }
     .main-card { background: #161b22; border-radius: 15px; padding: 20px; border: 1px solid #30363d; margin-bottom: 20px;}
-    .block-container {padding-top: 1rem;}
+    .block-container {padding-top: 1.5rem;}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. LOGIN ---
+# --- LOGIN ---
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
 
@@ -57,7 +57,7 @@ if not st.session_state.logged_in:
         st.title("🧠 Neural Engine")
         t1, t2 = st.tabs(["Accedi", "Registrati"])
         with t1:
-            u, p = st.text_input("User"), st.text_input("Pass", type="password")
+            u, p = st.text_input("Username"), st.text_input("Password", type="password")
             if st.button("LOG IN"):
                 conn = sqlite3.connect('neural_bet_pro.db')
                 res = conn.execute('SELECT password FROM users WHERE username=?', (u,)).fetchone()
@@ -66,72 +66,61 @@ if not st.session_state.logged_in:
                     st.session_state.logged_in, st.session_state.user = True, u
                     st.rerun()
         with t2:
-            nu, np = st.text_input("Nuovo User"), st.text_input("Nuova Pass", type="password")
+            nu, np = st.text_input("Nuovo Username"), st.text_input("Nuova Password", type="password")
             if st.button("CREA ACCOUNT"):
                 try:
                     conn = sqlite3.connect('neural_bet_pro.db')
                     conn.execute('INSERT INTO users VALUES (?,?,?)', (nu, hash_pwd(np), datetime.now().isoformat()))
                     conn.commit()
                     conn.close()
-                    st.success("Registrato!")
-                except: st.error("Errore.")
+                    st.success("Account creato!")
+                except: st.error("Errore: Utente esistente.")
 
-# --- 5. DASHBOARD OPERATIVA ---
+# --- DASHBOARD ---
 else:
     try:
         RAPID_KEY = st.secrets["RAPID_API_KEY"]
     except:
-        st.error("Configura 'RAPID_API_KEY' nei Secrets di Streamlit!")
+        st.error("Errore: Configura 'RAPID_API_KEY' nei Secrets!")
         RAPID_KEY = None
 
     with st.sidebar:
         st.title(f"👤 {st.session_state.user}")
         sport_id = st.selectbox("Campionato", [
-            ("Serie A", "135"), ("Premier League", "39"), 
-            ("La Liga", "140"), ("Bundesliga", "78"), ("Ligue 1", "61")
+            ("Serie A", "135"), ("Premier League", "39"), ("La Liga", "140"), ("Bundesliga", "78")
         ])
-        if st.button("Esci"):
+        if st.button("Logout"):
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title("🏟️ Analisi Pro - API Football")
+    st.title("🏟️ Analisi Pro - ApiFootball")
 
-    if RAPID_KEY and st.button("🚀 SCANSIONA PARTITE"):
+    if RAPID_KEY and st.button("🚀 AVVIA SCANSIONE"):
         try:
             url = "https://api-football-v1.p.rapidapi.com/v3/odds"
-            # Parametri: prendiamo le quote per la stagione attuale
-            querystring = {"league": sport_id[1], "season": "2025", "bookmaker": "6"} 
+            # Parametri aggiornati per la stagione 2024
+            querystring = {"league": sport_id[1], "season": "2024", "bookmaker": "6"} 
             headers = {
                 "X-RapidAPI-Key": RAPID_KEY,
                 "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"
             }
             
             response = requests.get(url, headers=headers, params=querystring).json()
-            
             matches = response.get('response', [])
             
             if not matches:
-                st.info("Nessuna quota disponibile per questa lega al momento.")
+                st.info("Nessuna quota disponibile al momento. Prova un altro campionato.")
             
             for item in matches:
-                # Estrazione sicura dei nomi delle squadre dal blocco fixture
-                home_team = item['fixture']['timezone'] # Placeholder se fixture name manca
-                # In API-Football le quote sono annidate: bookmakers -> bets -> values
+                if not item['bookmakers']: continue
                 bookmaker = item['bookmakers'][0]
-                # Cerchiamo il mercato "Match Winner" (solitamente il primo ID: 1)
+                # Cerchiamo il mercato 'Match Winner'
                 bet = next((b for b in bookmaker['bets'] if b['id'] == 1), None)
                 
-                if bet:
-                    odds_list = bet['values'] # Contiene Home, Draw, Away
-                    # Ordine API-Football: [0]=Home, [1]=Draw, [2]=Away
-                    o1 = float(odds_list[0]['odd'])
-                    ox = float(odds_list[1]['odd'])
-                    o2 = float(odds_list[2]['odd'])
-                    
-                    # Nomi reali delle squadre
-                    match_label = f"{item['fixture']['id']}" # ID univoco per il tasto
-                    team_h = odds_list[0]['value']
-                    team_a = odds_list[2]['value']
+                if bet and len(bet['values']) >= 3:
+                    odds = bet['values']
+                    o1, ox, o2 = float(odds[0]['odd']), float(odds[1]['odd']), float(odds[2]['odd'])
+                    team_h, team_a = odds[0]['value'], odds[2]['value']
 
                     res = NeuralEngine.analyze_market(o1, ox, o2)
                     verd, color = NeuralEngine.get_verdict(res['p1'], o1)
@@ -145,7 +134,7 @@ else:
                             st.plotly_chart(fig, use_container_width=True)
                         with c2:
                             st.write(f"Quota: **{o1}** | Equa: **{res['fair_1']:.2f}**")
-                            if st.button(f"⭐ Salva", key=f"fav_{match_label}"):
+                            if st.button(f"Salva", key=f"btn_{item['fixture']['id']}"):
                                 conn = sqlite3.connect('neural_bet_pro.db')
                                 conn.execute('INSERT INTO favorites VALUES (?,?,?,?,?)', 
                                             (st.session_state.user, f"{team_h}-{team_a}", verd, str(o1), datetime.now().strftime("%d/%m %H:%M")))
