@@ -30,7 +30,7 @@ def check_hashes(password, hashed_text):
     return make_hashes(password) == hashed_text
 
 def save_bet_to_db():
-    if st.session_state.logged_in:
+    if st.session_state.get('logged_in'):
         conn = sqlite3.connect('users.db')
         c = conn.cursor()
         bet_json = json.dumps(st.session_state.schedina)
@@ -39,7 +39,7 @@ def save_bet_to_db():
         conn.close()
 
 # --- 3. UI & CSS ---
-st.set_page_config(page_title="AI NEURAL COMMANDER v16", layout="wide")
+st.set_page_config(page_title="AI NEURAL COMMANDER v16.5", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
@@ -50,8 +50,14 @@ st.markdown("""
         border: 1px solid rgba(59, 130, 246, 0.2);
         border-radius: 20px; padding: 20px; margin-bottom: 15px;
     }
-    .terminal-text { font-family: 'Courier New', monospace; color: #10b981; font-size: 0.85rem; }
-    .quota-box { background: rgba(255, 255, 255, 0.03); border-radius: 12px; padding: 10px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05); }
+    .user-badge {
+        background: rgba(59, 130, 246, 0.2);
+        padding: 10px 20px;
+        border-radius: 50px;
+        border: 1px solid #3b82f6;
+        display: inline-block;
+        margin-bottom: 20px;
+    }
     .bet-row { background: rgba(16, 185, 129, 0.05); border-radius: 10px; padding: 10px; margin-bottom: 8px; border-left: 4px solid #10b981; }
     </style>
 """, unsafe_allow_html=True)
@@ -62,74 +68,71 @@ if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'user' not in st.session_state: st.session_state.user = ""
 if 'schedina' not in st.session_state: st.session_state.schedina = []
 if 'matches' not in st.session_state: st.session_state.matches = []
-if 'last_selected' not in st.session_state: st.session_state.last_selected = None
 
-# --- 5. LOGICA DI ACCESSO (SCHERMATA PRINCIPALE) ---
+# --- 5. SCHERMATA DI ACCESSO ---
 if not st.session_state.logged_in:
-    st.markdown("<h1 style='text-align: center; color: #3b82f6;'>🛡️ AI NEURAL COMMANDER ACCESS</h1>", unsafe_allow_html=True)
-    
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
+        st.markdown("<h1 style='text-align: center; color: #3b82f6; margin-top:50px;'>🛡️ NEURAL ACCESS</h1>", unsafe_allow_html=True)
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
-        choice = st.radio("Scegli Azione", ["Login", "Registrazione"], horizontal=True)
+        mode = st.tabs(["Accedi", "Crea Account"])
         
-        if choice == "Login":
-            user = st.text_input("Username")
-            pw = st.text_input("Password", type="password")
-            if st.button("ENTRA NEL SISTEMA", use_container_width=True):
+        with mode[0]:
+            u = st.text_input("Username", key="l_u")
+            p = st.text_input("Password", type="password", key="l_p")
+            if st.button("LOGIN", use_container_width=True):
                 conn = sqlite3.connect('users.db')
                 c = conn.cursor()
-                c.execute('SELECT password, current_bet FROM users WHERE username = ?', (user,))
-                data = c.fetchone()
+                c.execute('SELECT password, current_bet FROM users WHERE username = ?', (u,))
+                res = c.fetchone()
                 conn.close()
-                if data and check_hashes(pw, data[0]):
+                if res and check_hashes(p, res[0]):
                     st.session_state.logged_in = True
-                    st.session_state.user = user
-                    if data[1]: st.session_state.schedina = json.loads(data[1])
+                    st.session_state.user = u
+                    if res[1]: st.session_state.schedina = json.loads(res[1])
                     st.rerun()
-                else:
-                    st.error("Accesso negato: credenziali errate.")
+                else: st.error("Credenziali non valide")
         
-        else:
-            new_user = st.text_input("Crea Username")
-            new_pw = st.text_input("Crea Password", type="password")
-            if st.button("REGISTRA ACCOUNT", use_container_width=True):
-                if new_user and new_pw:
+        with mode[1]:
+            nu = st.text_input("Nuovo Username", key="r_u")
+            npw = st.text_input("Nuova Password", type="password", key="r_p")
+            if st.button("REGISTRATI", use_container_width=True):
+                if nu and npw:
                     conn = sqlite3.connect('users.db')
                     c = conn.cursor()
                     try:
-                        c.execute('INSERT INTO users(username, password, current_bet) VALUES (?,?,?)', (new_user, make_hashes(new_pw), "[]"))
+                        c.execute('INSERT INTO users(username, password, current_bet) VALUES (?,?,?)', (nu, make_hashes(npw), "[]"))
                         conn.commit()
-                        st.success("Account creato con successo! Ora effettua il login.")
-                    except:
-                        st.error("Errore: lo username potrebbe essere già occupato.")
+                        st.success("Registrato! Fai il login.")
+                    except: st.error("Username occupato")
                     conn.close()
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 6. INTERFACCIA SITO (DENTRO DOPO LOGIN) ---
+# --- 6. AREA RISERVATA (DOPO LOGIN) ---
 else:
-    # Barra superiore di stato
-    st.markdown(f"""
-        <div style='display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(59, 130, 246, 0.1); border-radius: 10px; margin-bottom: 20px;'>
-            <span>Benvenuto, <b>{st.session_state.user}</b></span>
-            <button onclick="window.location.reload()">Aggiorna</button>
-        </div>
-    """, unsafe_allow_html=True)
-    if st.sidebar.button("LOGOUT"):
-        st.session_state.logged_in = False
-        st.rerun()
+    # Sidebar con pulsante Logout
+    with st.sidebar:
+        st.markdown(f"<div class='user-badge'>👤 {st.session_state.user}</div>", unsafe_allow_html=True)
+        st.divider()
+        if st.button("🚪 LOGOUT", use_container_width=True):
+            save_bet_to_db() # Salva prima di uscire
+            st.session_state.logged_in = False
+            st.session_state.user = ""
+            st.session_state.schedina = []
+            st.rerun()
+        st.info("Tutte le tue selezioni vengono salvate automaticamente nel database neurale.")
 
-    tab_analisi, tab_schedina = st.tabs(["🚀 ANALISI LIVE", "📝 SCHEDINA SALVATA"])
+    # Main App Tabs
+    t1, t2 = st.tabs(["🚀 ANALISI EVENTI", "📝 LA MIA SCHEDINA"])
 
-    with tab_analisi:
-        # Codice Analisi (Versione v14-v15)
+    with t1:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
-        c1, c2 = st.columns([1, 1])
+        c1, c2 = st.columns(2)
         with c1:
-            league = st.selectbox("🏆 Campionato", ["Serie A (SA)", "Premier League (PL)", "La Liga (PD)"])
+            league = st.selectbox("Lega", ["Serie A (SA)", "Premier League (PL)", "La Liga (PD)"])
             l_code = league.split("(")[1].replace(")", "")
         with c2:
-            if st.button("🔄 AGGIORNA FEED API", use_container_width=True):
+            if st.button("🔄 SINCRONIZZA FEED", use_container_width=True):
                 headers = {'X-Auth-Token': API_KEY}
                 res = requests.get(f"{BASE_URL}competitions/{l_code}/matches?status=SCHEDULED", headers=headers)
                 if res.status_code == 200: st.session_state.matches = res.json().get('matches', [])
@@ -137,56 +140,46 @@ else:
         matches = st.session_state.get('matches', [])
         if matches:
             labels = [f"{datetime.fromisoformat(m['utcDate'].replace('Z', '+00:00')).strftime('%d/%m - %H:%M')} | {m['homeTeam']['name']} vs {m['awayTeam']['name']}" for m in matches]
-            selected = st.selectbox("🎯 Seleziona Evento", ["---"] + labels)
+            selected = st.selectbox("Seleziona Match", ["---"] + labels)
             
             if selected != "---":
-                # Animazione Caricamento
-                if st.session_state.last_selected != selected:
-                    with st.status("🧬 Deep Scan...", expanded=True):
-                        time.sleep(1.0)
-                    st.session_state.last_selected = selected
-
                 m_data = matches[labels.index(selected)]
                 h_n, a_n = m_data['homeTeam']['name'], m_data['awayTeam']['name']
-                
-                # Simulazione Dati
                 p = np.random.dirichlet(np.array([12, 6, 7]), size=1)[0]
                 
-                st.markdown(f"<h2 style='text-align:center;'>{h_n.upper()} vs {a_n.upper()}</h2>", unsafe_allow_html=True)
+                st.markdown(f"<h2 style='text-align:center;'>{h_n} vs {a_n}</h2>", unsafe_allow_html=True)
                 
-                col_l, col_m, col_r = st.columns([1, 1.5, 1])
-                with col_m:
-                    st.markdown('<div class="data-card" style="text-align:center;">', unsafe_allow_html=True)
-                    st.subheader("🎯 Quote & Probabilità")
-                    c1, c2, c3 = st.columns(3)
-                    res_l = ['1', 'X', '2']
-                    for i, col in enumerate([c1, c2, c3]):
-                        q = 1/p[i]
-                        if col.button(f"{res_l[i]} @ {q:.2f}", use_container_width=True):
-                            st.session_state.schedina.append({"m": f"{h_n}-{a_n}", "s": res_l[i], "q": q})
-                            save_bet_to_db()
-                            st.toast("Salvato!")
-                    st.markdown('</div>', unsafe_allow_html=True)
+                # Selezione rapida quota
+                st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
+                c1, c2, c3 = st.columns(3)
+                rl = ['1', 'X', '2']
+                for i, col in enumerate([c1, c2, c3]):
+                    q = 1/p[i]
+                    if col.button(f"{rl[i]} @ {q:.2f}", key=f"b_{i}", use_container_width=True):
+                        st.session_state.schedina.append({"m": f"{h_n}-{a_n}", "s": rl[i], "q": q})
+                        save_bet_to_db()
+                        st.toast(f"Aggiunto {rl[i]}!")
+                st.markdown("</div>", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    with tab_schedina:
+    with t2:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
-        st.subheader("📋 Riepilogo Permanente")
+        st.subheader("📋 Schedina Salvata")
         if not st.session_state.schedina:
-            st.write("Nessun evento salvato nel database.")
+            st.info("Nessuna giocata presente.")
         else:
-            total_odd = 1.0
+            tot = 1.0
             for i, bet in enumerate(st.session_state.schedina):
-                col_inf, col_rem = st.columns([4, 1])
-                col_inf.markdown(f"<div class='bet-row'>{bet['m']} - <b>{bet['s']}</b> @ {bet['q']:.2f}</div>", unsafe_allow_html=True)
-                if col_rem.button("🗑️", key=f"del_{i}"):
+                col_a, col_b = st.columns([5, 1])
+                col_a.markdown(f"<div class='bet-row'>{bet['m']} -> <b>{bet['s']}</b> @ {bet['q']:.2f}</div>", unsafe_allow_html=True)
+                if col_b.button("🗑️", key=f"d_{i}"):
                     st.session_state.schedina.pop(i)
                     save_bet_to_db()
                     st.rerun()
-                total_odd *= bet['q']
+                tot *= bet['q']
             st.divider()
-            st.metric("QUOTA TOTALE", f"x {total_odd:.2f}")
-            if st.button("SVUOTA TUTTO"):
+            st.metric("QUOTA TOTALE", f"x {tot:.2f}")
+            if st.button("SVUOTA SCHEDINA"):
                 st.session_state.schedina = []
                 save_bet_to_db()
                 st.rerun()
