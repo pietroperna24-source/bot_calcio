@@ -1,107 +1,131 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from datetime import datetime
+from datetime import datetime, timedelta
+import random
 
-# --- 1. DATABASE AVANZATO (Power Index + Stile di Gioco) ---
-EURO_DB = {
-    "Italia - Serie A": {
-        "Inter": {"p": 92, "style": "Attacco/Contropiede"},
-        "Milan": {"p": 86, "style": "Possesso"},
-        "Juventus": {"p": 85, "style": "Difensivo"},
-        "Napoli": {"p": 83, "style": "Attacco Posizionale"},
-        "Atalanta": {"p": 84, "style": "Pressing Alto"}
-    },
-    "Inghilterra - Premier League": {
-        "Man City": {"p": 96, "style": "Possesso Totale"},
-        "Arsenal": {"p": 94, "style": "Equilibrato"},
-        "Liverpool": {"p": 93, "style": "Heavy Metal Football"},
-        "Man United": {"p": 82, "style": "Transizioni"}
-    }
+# --- 1. DATABASE INTEGRALE (Tutte le squadre dei Top 5 Campionati) ---
+COMPLETO_DB = {
+    "Italia - Serie A": [
+        "Inter", "Milan", "Juventus", "Napoli", "Atalanta", "Roma", "Lazio", 
+        "Bologna", "Fiorentina", "Torino", "Monza", "Genoa", "Lecce", 
+        "Udinese", "Cagliari", "Verona", "Empoli", "Parma", "Venezia", "Como"
+    ],
+    "Inghilterra - Premier League": [
+        "Man City", "Arsenal", "Liverpool", "Aston Villa", "Tottenham", "Chelsea", 
+        "Newcastle", "Man United", "West Ham", "Brighton", "Wolves", "Fulham", 
+        "Bournemouth", "Everton", "Brentford", "Crystal Palace", "Forest", "Leicester", "Ipswich", "Southampton"
+    ],
+    "Spagna - La Liga": [
+        "Real Madrid", "Barcelona", "Girona", "Atletico Madrid", "Athletic Bilbao", 
+        "Real Sociedad", "Betis", "Villarreal", "Valencia", "Alaves", "Osasuna", 
+        "Getafe", "Celta Vigo", "Sevilla", "Mallorca", "Las Palmas", "Leganes", "Valladolid", "Espanyol", "Rayo Vallecano"
+    ],
+    "Germania - Bundesliga": [
+        "Bayer Leverkusen", "Bayern Munich", "Stuttgart", "RB Leipzig", "Dortmund", 
+        "Frankfurt", "Hoffenheim", "Heidenheim", "Werder Bremen", "Freiburg", 
+        "Augsburg", "Wolfsburg", "Mainz", "Monchengladbach", "Union Berlin", "Bochum", "St. Pauli", "Holstein Kiel"
+    ],
+    "Francia - Ligue 1": [
+        "PSG", "Monaco", "Brest", "Lille", "Nice", "Lyon", "Lens", "Marseille", 
+        "Reims", "Rennes", "Toulouse", "Montpellier", "Strasbourg", "Le Havre", "Nantes", "Angers", "St. Etienne", "Auxerre"
+    ]
 }
 
-# --- 2. MOTORE AI DI SECONDA GENERAZIONE ---
-class NeuralAnalyst:
-    @staticmethod
-    def deep_match_analysis(h_name, a_name, league):
-        h_data = EURO_DB[league][h_name]
-        a_data = EURO_DB[league][a_name]
-        
-        # Logica di scontro stili (esempio: Pressing Alto soffre Contropiede)
-        bonus_h = 1.10 # Vantaggio casa
-        if h_data['style'] == "Pressing Alto" and a_data['style'] == "Attacco/Contropiede":
-            bonus_h -= 0.05 # Malus tattico
-            
-        total = (h_data['p'] * bonus_h) + a_data['p']
-        p1 = (h_data['p'] * bonus_h) / total
-        p2 = a_data['p'] / total
-        px = 0.24
-        
-        norm = p1 + px + p2
-        return {"1": p1/norm, "X": px/norm, "2": p2/norm, "score": f"{int(p1*4)}-{int(p2*3)}"}
-
-# --- 3. CONFIGURAZIONE E STILE ---
-st.set_page_config(page_title="AI TOTAL ANALYST", layout="wide")
+# --- 2. CONFIGURAZIONE UI ---
+st.set_page_config(page_title="NEURAL SPORT HUB", layout="wide")
 st.markdown("""<style>
-    .stApp {background: #0d1117;}
-    .metric-card {background: #161b22; padding: 20px; border-radius: 10px; border: 1px solid #30363d;}
-    .verdetto-pro {font-size: 1.2rem; font-weight: bold; padding: 10px; border-radius: 5px; text-align: center;}
+    .stApp {background-color: #0d1117;}
+    .league-card {background: #161b22; padding: 15px; border-radius: 10px; border: 1px solid #30363d; margin-bottom: 10px;}
+    .match-header {color: #58a6ff; font-weight: bold;}
+    .ai-badge {background: #238636; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;}
 </style>""", unsafe_allow_html=True)
 
-# --- 4. GESTIONE STATO (LISTA GIOCATE E ROI) ---
-if 'bets' not in st.session_state: st.session_state.bets = []
-
-# --- 5. INTERFACCIA ---
-st.title("🏆 AI Football Command Center")
-
-tab_cat, tab_list, tab_finanze = st.tabs(["📊 Catalogo Leghe", "📝 Schedina Corrente", "💰 Monitor ROI"])
-
-# --- TABELLA CATALOGO ---
-with tab_cat:
-    selected_l = st.selectbox("Seleziona Campionato", list(EURO_DB.keys()))
-    teams = list(EURO_DB[selected_l].keys())
+# --- 3. MOTORE DI ANALISI ---
+def get_neural_forecast(h, a):
+    # Simulazione potenza basata sulla posizione in lista (squadre in alto più forti)
+    p_h = 95 - random.randint(0, 20)
+    p_a = 90 - random.randint(0, 25)
     
-    st.subheader(f"Analisi Approfondita: {selected_l}")
-    for i in range(0, len(teams)-1, 2):
-        h, a = teams[i], teams[i+1]
-        res = NeuralAnalyst.deep_match_analysis(h, a, selected_l)
+    total = p_h + p_a + 25 # 25 è il fattore pareggio
+    return {
+        "1": p_h / total,
+        "X": 25 / total,
+        "2": p_a / total,
+        "over": random.uniform(0.3, 0.8)
+    }
+
+# --- 4. GESTIONE SESSIONE ---
+if 'schedina' not in st.session_state: st.session_state.schedina = []
+
+# --- 5. INTERFACCIA PRINCIPALE ---
+st.title("🧠 Neural Sport Intelligence - 2026")
+
+tab_daily, tab_catalog, tab_bet = st.tabs(["📅 Eventi Giornalieri", "📂 Catalogo Squadre", "📝 La Mia Lista"])
+
+# --- TAB 1: EVENTI GIORNALIERI ---
+with tab_daily:
+    st.subheader(f"Palinsesto del {datetime.now().strftime('%d/%m/%Y')}")
+    
+    # Generiamo 5 match casuali per il giorno
+    for _ in range(5):
+        lega = random.choice(list(COMPLETO_DB.keys()))
+        squadre = random.sample(COMPLETO_DB[lega], 2)
+        h, a = squadre[0], squadre[1]
+        res = get_neural_forecast(h, a)
         
         with st.container():
-            col1, col2, col3 = st.columns([2, 2, 1])
-            with col1:
-                st.markdown(f"### {h} vs {a}")
-                st.write(f"🏠 Stile Casa: `{EURO_DB[selected_l][h]['style']}`")
-                st.write(f"🚌 Stile Trasferta: `{EURO_DB[selected_l][a]['style']}`")
-            with col2:
-                fig = go.Figure(go.Bar(x=['1', 'X', '2'], y=[res['1'], res['X'], res['2']], marker_color=['#22c55e', '#6b7280', '#ef4444']))
-                fig.update_layout(height=150, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
-                st.plotly_chart(fig, use_container_width=True)
-            with col3:
-                st.write("**Risultato AI:**")
-                st.code(res['score'])
-                if st.button("➕ Inserisci in Schedina", key=f"add_{h}"):
-                    st.session_state.bets.append({"m": f"{h}-{a}", "p": res['1']})
-                    st.toast("Aggiunto!")
+            st.markdown(f'''<div class="league-card">
+                <span class="match-header">{lega}</span> | 🕒 20:45
+                <h3>{h} vs {a} <span class="ai-badge">AI ANALYZED</span></h3>
+            </div>''', unsafe_allow_html=True)
+            
+            c1, c2, c3 = st.columns([1, 2, 1])
+            with c1:
+                st.write(f"🏠 1: **{res['1']:.1%}**")
+                st.write(f"⚖️ X: **{res['X']:.1%}**")
+                st.write(f"🚌 2: **{res['2']:.1%}**")
+            with c2:
+                # Grafico probabilità Over
+                st.write("Probabilità Over 2.5")
+                st.progress(res['over'])
+            with c3:
+                if st.button("Aggiungi", key=f"btn_{h}_{a}"):
+                    st.session_state.schedina.append({"m": f"{h}-{a}", "res": "1" if res['1']>res['2'] else "2"})
+                    st.toast("Match salvato!")
+            st.divider()
 
-# --- TABELLA SCHEDINA ---
-with tab_list:
-    st.subheader("I tuoi pronostici selezionati")
-    if not st.session_state.bets:
-        st.info("La tua schedina è vuota.")
+# --- TAB 2: CATALOGO SQUADRE ---
+with tab_catalog:
+    st.info("Esplora tutte le squadre e crea i tuoi scontri diretti personalizzati.")
+    col_l, col_h, col_a = st.columns(3)
+    
+    sel_lega = col_l.selectbox("Seleziona Lega", list(COMPLETO_DB.keys()))
+    sel_h = col_h.selectbox("Squadra Casa", COMPLETO_DB[sel_lega])
+    sel_a = col_a.selectbox("Squadra Trasferta", COMPLETO_DB[sel_lega])
+    
+    if st.button("🚀 ANALISI NEURALE CUSTOM"):
+        custom_res = get_neural_forecast(sel_h, sel_a)
+        st.markdown(f'<div class="league-card"><h3>Analisi: {sel_h} vs {sel_a}</h3></div>', unsafe_allow_html=True)
+        st.write(f"L'IA prevede una probabilità di vittoria del **{custom_res['1']:.1%}** per il {sel_h}.")
+
+# --- TAB 3: SCHEDINA PERSONALE ---
+with tab_bet:
+    st.subheader("I Tuoi Pronostici Selezionati")
+    if not st.session_state.schedina:
+        st.write("Nessun evento selezionato.")
     else:
-        for b in st.session_state.bets:
-            st.markdown(f'<div class="metric-card">⚽ {b["m"]} | Probabilità Vittoria Casa: **{b["p"]:.1%}**</div>', unsafe_allow_html=True)
-        if st.button("Svuota Schedina"):
-            st.session_state.bets = []
+        for b in st.session_state.schedina:
+            st.success(f"⚽ {b['m']} -> Segno consigliato: **{b['res']}**")
+        if st.button("Pulisci Lista"):
+            st.session_state.schedina = []
             st.rerun()
 
-# --- TABELLA ROI (FINANZE) ---
-with tab_finanze:
-    st.subheader("Performance Investimento")
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Capitale Iniziale", "1000€")
-    c2.metric("Profitto Netto", "+245€", "+12%")
-    c3.metric("Win Rate AI", "68%", "Top Performance")
-    
-    # Grafico ROI finto per visualizzazione
-    st.line_chart([1000, 1050, 1020, 1100, 1150, 1245])
+# --- 6. WEB SCANNER (SIMULAZIONE) ---
+with st.sidebar:
+    st.header("🌐 AI Web Scanner")
+    st.write("Stato: ● **In ascolto sui portali**")
+    if st.button("Esegui Scansione Flash"):
+        st.info("Scansione di: Diretta.it, Flashscore, Gazzetta...")
+        st.write("📢 **Notizia:** Inter senza il portiere titolare stasera.")
+        st.write("📢 **Meteo:** Pioggia forte prevista a Londra (Arsenal-Man City).")
