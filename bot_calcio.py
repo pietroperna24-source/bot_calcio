@@ -129,7 +129,7 @@ else:
         try:
             url = "https://api-football-v1.p.rapidapi.com/v3/odds"
             # ANNO 2026 E BOOKMAKER 1 (BET365)
-            querystring = {"league": sport_id[1], "season": "2026", "bookmaker": "1"} 
+            querystring = {"league": sport_id[1], "season": "2025", "bookmaker": "1"} 
             headers = {
                 "X-RapidAPI-Key": RAPID_KEY,
                 "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"
