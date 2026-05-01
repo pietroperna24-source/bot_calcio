@@ -18,12 +18,17 @@ BASE_URL = "https://api.football-data.org/v4/"
 def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
+    # Tabella principale
     c.execute('''CREATE TABLE IF NOT EXISTS users 
-                 (username TEXT PRIMARY KEY, password TEXT, current_bet TEXT, theme TEXT)''')
+                 (username TEXT PRIMARY KEY, password TEXT, current_bet TEXT, theme TEXT, created_at TEXT)''')
+    # Migrazioni automatiche per colonne mancanti
     try:
         c.execute("ALTER TABLE users ADD COLUMN theme TEXT DEFAULT '#3b82f6'")
-    except sqlite3.OperationalError:
-        pass 
+    except sqlite3.OperationalError: pass
+    try:
+        c.execute("ALTER TABLE users ADD COLUMN created_at TEXT")
+    except sqlite3.OperationalError: pass
+    
     conn.commit()
     conn.close()
 
@@ -65,7 +70,7 @@ if 'theme_color' not in st.session_state: st.session_state.theme_color = "#3b82f
 if 'last_selected' not in st.session_state: st.session_state.last_selected = None
 
 # --- 5. UI & STILE ---
-st.set_page_config(page_title="AI NEURAL COMMANDER v20.2", layout="wide")
+st.set_page_config(page_title="NEURAL COMMANDER v21.5", layout="wide")
 t_color = st.session_state.theme_color
 
 st.markdown(f"""
@@ -85,7 +90,7 @@ st.markdown(f"""
 
 # --- 6. LOGICA ACCESSO (GATEKEEPER) ---
 if not st.session_state.logged_in:
-    st.markdown(f"<h1 style='text-align:center; color:{t_color};'>🛡️ NEURAL COMMANDER</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h1 style='text-align:center; color:{t_color};'>🛡️ NEURAL COMMANDER ACCESS</h1>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
@@ -109,19 +114,26 @@ if not st.session_state.logged_in:
             if st.button("REGISTRATI", use_container_width=True):
                 if u_in and p_in:
                     conn = sqlite3.connect('users.db'); c = conn.cursor()
+                    now = datetime.now().strftime("%d/%m/%Y %H:%M")
                     try:
-                        c.execute('INSERT INTO users(username, password, current_bet, theme) VALUES (?,?,?,?)', 
-                                  (u_in, make_hashes(p_in), "[]", "#3b82f6"))
+                        c.execute('INSERT INTO users(username, password, current_bet, theme, created_at) VALUES (?,?,?,?,?)', 
+                                  (u_in, make_hashes(p_in), "[]", "#3b82f6", now))
                         conn.commit(); st.success("Registrato! Ora effettua il login.")
-                    except: st.error("Errore: Username esistente.")
+                    except: st.error("Errore: Username già occupato.")
                     conn.close()
         st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 7. AREA OPERATIVA ---
 else:
-    t1, t2, t3 = st.tabs(["🚀 ANALISI LIVE", "📝 LA MIA SCHEDINA", "⚙️ IMPOSTAZIONI"])
+    # Gestione dinamica dei Tab (Aggiunge Admin se l'utente è "admin")
+    tabs_list = ["🚀 ANALISI LIVE", "📝 LA MIA SCHEDINA", "⚙️ IMPOSTAZIONI"]
+    if st.session_state.user.lower() == "admin":
+        tabs_list.append("🔐 PANNELLO ADMIN")
+    
+    t_analisi, t_schedina, t_settings, *t_admin = st.tabs(tabs_list)
 
-    with t1:
+    # --- TAB ANALISI ---
+    with t_analisi:
         st.markdown(f"<p style='color:{t_color}'>Operatore: <b>{st.session_state.user}</b></p>", unsafe_allow_html=True)
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
@@ -136,7 +148,7 @@ else:
         matches = st.session_state.get('matches', [])
         if matches:
             labels = [f"{datetime.fromisoformat(m['utcDate'].replace('Z', '+00:00')).strftime('%H:%M')} | {m['homeTeam']['name']} vs {m['awayTeam']['name']}" for m in matches]
-            selected = st.selectbox("🎯 Target", ["---"] + labels)
+            selected = st.selectbox("🎯 Seleziona Target", ["---"] + labels)
             
             if selected != "---":
                 if st.session_state.last_selected != selected:
@@ -146,7 +158,7 @@ else:
                         st.markdown("<p class='terminal-text'>[SCAN]: Avvio Scansione Neurale...</p>", unsafe_allow_html=True)
                         pb = st.progress(0)
                         for i, step in enumerate(["📡 Link API...", "🧬 Power Index...", "🚑 Infermeria...", "✅ Pronto."]):
-                            time.sleep(0.35); st.markdown(f"<p class='terminal-text' style='opacity:0.7;'>{step}</p>", unsafe_allow_html=True)
+                            time.sleep(0.3); st.markdown(f"<p class='terminal-text' style='opacity:0.7;'>{step}</p>", unsafe_allow_html=True)
                             pb.progress((i+1)*25)
                         st.markdown('</div>', unsafe_allow_html=True)
                     ph.empty(); st.session_state.last_selected = selected
@@ -198,7 +210,8 @@ else:
                     st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    with t2:
+    # --- TAB SCHEDINA ---
+    with t_schedina:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
         st.subheader("📋 Schedina Salvata")
         if not st.session_state.schedina: st.info("Sposta qui i tuoi pronostici cliccando sulle quote.")
@@ -215,28 +228,29 @@ else:
                 st.session_state.schedina = []; save_bet_to_db(); st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-    with t3:
+    # --- TAB IMPOSTAZIONI ---
+    with t_settings:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
         st.subheader("⚙️ Gestione Profilo")
-        # Modifica Username
-        new_user = st.text_input("Username", value=st.session_state.user)
-        if st.button("Salva Username"):
+        # Username
+        new_user = st.text_input("Modifica Username", value=st.session_state.user)
+        if st.button("Aggiorna Username"):
             conn = sqlite3.connect('users.db'); c = conn.cursor()
             try:
                 c.execute("UPDATE users SET username = ? WHERE username = ?", (new_user, st.session_state.user))
-                conn.commit(); st.session_state.user = new_user; st.success("Aggiornato!")
-            except: st.error("Username occupato.")
+                conn.commit(); st.session_state.user = new_user; st.success("Username Aggiornato!")
+            except: st.error("Errore: Nome già occupato.")
             conn.close()
         st.divider()
-        # Modifica Password
+        # Password
         new_pass = st.text_input("Nuova Password", type="password")
-        if st.button("Cambia Password"):
+        if st.button("Aggiorna Password"):
             if new_pass:
                 conn = sqlite3.connect('users.db'); c = conn.cursor()
                 c.execute("UPDATE users SET password = ? WHERE username = ?", (make_hashes(new_pass), st.session_state.user))
-                conn.commit(); conn.close(); st.success("Password modificata!")
+                conn.commit(); conn.close(); st.success("Password Cambiata!")
         st.divider()
-        # Tema e Logout
+        # Tema
         new_c = st.color_picker("Colore Tema", t_color)
         if st.button("Salva Colore"):
             st.session_state.theme_color = new_c
@@ -247,3 +261,16 @@ else:
         if st.button("🚪 LOGOUT", use_container_width=True, type="primary"):
             st.session_state.logged_in = False; st.session_state.user = ""; st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
+
+    # --- TAB ADMIN (Solo se Admin) ---
+    if st.session_state.user.lower() == "admin":
+        with t_admin[0]:
+            st.markdown('<div class="data-card">', unsafe_allow_html=True)
+            st.subheader("👥 Registro Utenti Registrati")
+            conn = sqlite3.connect('users.db')
+            df = pd.read_sql_query("SELECT username, created_at, theme FROM users", conn)
+            conn.close()
+            st.write(f"Totale Utenti Iscritti: **{len(df)}**")
+            st.dataframe(df, use_container_width=True)
+            if st.button("Aggiorna Database"): st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
