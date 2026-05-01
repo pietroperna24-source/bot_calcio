@@ -39,7 +39,7 @@ def save_bet_to_db():
         conn.close()
 
 # --- 3. UI & CSS ---
-st.set_page_config(page_title="AI NEURAL COMMANDER v17.0", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="AI NEURAL COMMANDER v17.5", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
@@ -53,33 +53,20 @@ st.markdown("""
     .terminal-text { font-family: 'Courier New', monospace; color: #10b981; font-size: 0.85rem; margin: 0; }
     .absent-card { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px; border-radius: 10px; margin-top: 5px; font-size: 0.8rem; }
     .bet-row { background: rgba(16, 185, 129, 0.05); border-radius: 10px; padding: 10px; margin-bottom: 8px; border-left: 4px solid #10b981; }
+    
+    /* Stile specifico per il box utente in sidebar */
+    .sidebar-user-box {
+        background: rgba(59, 130, 246, 0.1);
+        padding: 15px;
+        border-radius: 15px;
+        border: 1px solid #3b82f6;
+        text-align: center;
+        margin-bottom: 20px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 4. FUNZIONI ANALISI ---
-def fetch_api_data(endpoint):
-    headers = {'X-Auth-Token': API_KEY}
-    try:
-        response = requests.get(f"{BASE_URL}{endpoint}", headers=headers, timeout=10)
-        return response.json()
-    except: return None
-
-def get_deep_analysis():
-    p = np.random.dirichlet(np.array([12, 6, 7]), size=1)[0]
-    uo = random.uniform(0.3, 0.7)
-    gg = random.uniform(0.4, 0.6)
-    players = ["M. Rossi", "L. Moretti", "G. Esposito", "A. Ricci", "D. Bianchi"]
-    reasons = ["Infortunio", "Squalifica", "Dubbio"]
-    return {
-        "1X2": p, "UO25": [1-uo, uo], "GGNG": [gg, 1-gg],
-        "RADAR": [random.randint(65, 98) for _ in range(5)],
-        "h_abs": [{"n": random.choice(players), "r": random.choice(reasons)} for _ in range(random.randint(0,2))],
-        "a_abs": [{"n": random.choice(players), "r": random.choice(reasons)} for _ in range(random.randint(0,2))],
-        "ref": random.choice(["D. Orsato", "M. Oliver", "S. Marciniak"]),
-        "wet": random.choice(["Sereno 22°C", "Pioggia 14°C", "Nuvoloso 18°C"])
-    }
-
-# --- 5. INIZIALIZZAZIONE ---
+# --- 4. INIZIALIZZAZIONE ---
 init_db()
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'user' not in st.session_state: st.session_state.user = ""
@@ -87,13 +74,14 @@ if 'schedina' not in st.session_state: st.session_state.schedina = []
 if 'matches' not in st.session_state: st.session_state.matches = []
 if 'last_selected' not in st.session_state: st.session_state.last_selected = None
 
-# --- 6. LOGICA GATEKEEPER (LOGIN/REGISTRAZIONE) ---
+# --- 5. SCHERMATA DI ACCESSO (GATEKEEPER) ---
 if not st.session_state.logged_in:
     st.markdown("<h1 style='text-align: center; color: #3b82f6;'>🛡️ AI NEURAL COMMANDER ACCESS</h1>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
         choice = st.radio("Scegli Azione", ["Login", "Registrazione"], horizontal=True)
+        
         if choice == "Login":
             user = st.text_input("Username")
             pw = st.text_input("Password", type="password")
@@ -108,7 +96,8 @@ if not st.session_state.logged_in:
                     st.session_state.user = user
                     if data[1]: st.session_state.schedina = json.loads(data[1])
                     st.rerun()
-                else: st.error("Accesso negato.")
+                else: st.error("Accesso negato: credenziali non valide.")
+        
         else:
             new_user = st.text_input("Crea Username")
             new_pw = st.text_input("Crea Password", type="password")
@@ -119,34 +108,48 @@ if not st.session_state.logged_in:
                     try:
                         c.execute('INSERT INTO users(username, password, current_bet) VALUES (?,?,?)', (new_user, make_hashes(new_pw), "[]"))
                         conn.commit()
-                        st.success("Registrato! Ora effettua il login.")
-                    except: st.error("Username già occupato.")
+                        st.success("Account creato! Fai il login per entrare.")
+                    except: st.error("Errore: username già esistente.")
                     conn.close()
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 7. INTERFACCIA PRINCIPALE (DOPO LOGIN) ---
+# --- 6. INTERFACCIA INTERNA (DOPO LOGIN) ---
 else:
+    # --- SIDEBAR CON PULSANTE LOGOUT BEN VISIBILE ---
     with st.sidebar:
-        st.markdown(f"<div style='background:rgba(59,130,246,0.1); padding:15px; border-radius:15px; border:1px solid #3b82f6;'>👤 Utente: <b>{st.session_state.user}</b></div>", unsafe_allow_html=True)
-        st.write("")
-        if st.button("🚪 LOGOUT", use_container_width=True):
+        st.markdown(f"""
+            <div class="sidebar-user-box">
+                <small style="color: #94a3b8;">SESSIONE ATTIVA</small><br>
+                <b style="font-size: 1.2rem; color: #fff;">{st.session_state.user}</b>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # IL PULSANTE DI LOGOUT
+        if st.button("🚪 ESCI (LOGOUT)", use_container_width=True, type="primary"):
             st.session_state.logged_in = False
+            st.session_state.user = ""
+            st.session_state.schedina = []
+            st.session_state.last_selected = None
             st.rerun()
+            
         st.divider()
-        st.caption("v17.0 Gold Edition")
+        st.write("⚙️ Impostazioni Profilo")
+        st.caption("AI Neural Commander v17.5 Gold")
 
+    # --- TAB CONTENUTI ---
     tab_analisi, tab_schedina = st.tabs(["🚀 ANALISI LIVE", "📝 LA MIA SCHEDINA"])
 
     with tab_analisi:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
         c1, c2 = st.columns([1, 1])
         with c1:
-            league = st.selectbox("🏆 Lega", ["Serie A (SA)", "Premier League (PL)", "La Liga (PD)"])
+            league = st.selectbox("🏆 Seleziona Lega", ["Serie A (SA)", "Premier League (PL)", "La Liga (PD)"])
             l_code = league.split("(")[1].replace(")", "")
         with c2:
             if st.button("🔄 AGGIORNA FEED API", use_container_width=True):
-                data = fetch_api_data(f"competitions/{l_code}/matches?status=SCHEDULED")
-                if data: st.session_state.matches = data.get('matches', [])
+                headers = {'X-Auth-Token': API_KEY}
+                res = requests.get(f"{BASE_URL}competitions/{l_code}/matches?status=SCHEDULED", headers=headers)
+                if res.status_code == 200: st.session_state.matches = res.json().get('matches', [])
 
         matches = st.session_state.get('matches', [])
         if matches:
@@ -154,51 +157,52 @@ else:
             selected = st.selectbox("🎯 Seleziona Evento", ["---"] + labels)
             
             if selected != "---":
+                # Animazione Hacker
                 if st.session_state.last_selected != selected:
-                    loading_placeholder = st.empty()
-                    with loading_placeholder.container():
+                    placeholder = st.empty()
+                    with placeholder.container():
                         st.markdown('<div class="data-card">', unsafe_allow_html=True)
-                        st.markdown("<p class='terminal-text'>[SISTEMA]: Avvio Scansione Neurale...</p>", unsafe_allow_html=True)
+                        st.markdown("<p class='terminal-text'>[SISTEMA]: Inizializzazione Deep Scan...</p>", unsafe_allow_html=True)
                         pb = st.progress(0)
-                        for i, s in enumerate(["📡 Link API...", "🧬 Scan Power Index...", "🚑 Verifica Infortunati...", "✅ Completato."]):
+                        for i, s in enumerate(["📡 Link API...", "🧬 Scan Power Index...", "🚑 Verifica Infermeria...", "✅ Completato."]):
                             time.sleep(0.4)
                             st.markdown(f"<p class='terminal-text' style='opacity:0.7;'>{s}</p>", unsafe_allow_html=True)
                             pb.progress((i+1)*25)
                         st.markdown('</div>', unsafe_allow_html=True)
-                    loading_placeholder.empty()
+                    placeholder.empty()
                     st.session_state.last_selected = selected
 
-                m_idx = labels.index(selected)
-                m_data = matches[m_idx]
+                m_data = matches[labels.index(selected)]
                 h_n, a_n = m_data['homeTeam']['name'], m_data['awayTeam']['name']
-                res = get_deep_analysis()
-
+                
+                # Simulazione Dati Deep
+                p = np.random.dirichlet(np.array([12, 6, 7]), size=1)[0]
+                radar_val = [random.randint(65, 98) for _ in range(5)]
+                
                 st.markdown(f"<h2 style='text-align:center;'>{h_n.upper()} vs {a_n.upper()}</h2>", unsafe_allow_html=True)
-
+                
                 col_l, col_m, col_r = st.columns([1, 1.5, 1])
                 with col_l:
                     st.markdown('<div class="data-card">', unsafe_allow_html=True)
                     st.write("🚑 **Assenti Home**")
-                    if not res['h_abs']: st.write("✅ Nessuno")
-                    for p in res['h_abs']: st.markdown(f"<div class='absent-card'><b>{p['n']}</b><br>{p['r']}</div>", unsafe_allow_html=True)
+                    st.markdown("<div class='absent-card'><b>L. Martinez</b><br>Infortunio Muscolare</div>", unsafe_allow_html=True)
                     st.divider()
-                    st.write(f"⚖️ {res['ref']}")
-                    st.write(f"☁️ {res['wet']}")
+                    st.write(f"⚖️ Arbitro: {random.choice(['D. Orsato', 'M. Oliver'])}")
                     st.markdown('</div>', unsafe_allow_html=True)
 
                 with col_m:
                     st.markdown('<div class="data-card" style="text-align:center;">', unsafe_allow_html=True)
-                    st.subheader("🎯 Neural Betting")
+                    st.subheader("🎯 Neural Probabilities")
                     c1, c2, c3 = st.columns(3)
-                    labs = ['1', 'X', '2']
+                    res_l = ['1', 'X', '2']
                     for i, col in enumerate([c1, c2, c3]):
-                        q = 1/res['1X2'][i]
-                        if col.button(f"{labs[i]} @ {q:.2f}", key=f"b_{i}", use_container_width=True):
-                            st.session_state.schedina.append({"m": f"{h_n}-{a_n}", "s": labs[i], "q": q})
+                        q = 1/p[i]
+                        if col.button(f"{res_l[i]} @ {q:.2f}", key=f"btn_{i}", use_container_width=True):
+                            st.session_state.schedina.append({"m": f"{h_n}-{a_n}", "s": res_l[i], "q": q})
                             save_bet_to_db()
-                            st.toast("Aggiunto!")
+                            st.toast(f"✅ {res_l[i]} aggiunto!")
                     
-                    fig = go.Figure(data=go.Scatterpolar(r=res['RADAR'], theta=['Att','Dif','For','Fis','Tat'], fill='toself', line_color='#10b981'))
+                    fig = go.Figure(data=go.Scatterpolar(r=radar_val, theta=['Att','Dif','For','Fis','Tat'], fill='toself', line_color='#10b981'))
                     fig.update_layout(polar=dict(bgcolor='rgba(0,0,0,0)', radialaxis=dict(visible=False, range=[0, 100])), showlegend=False, height=200, margin=dict(t=20,b=20,l=35,r=35), paper_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(fig, use_container_width=True)
                     st.markdown('</div>', unsafe_allow_html=True)
@@ -206,26 +210,21 @@ else:
                 with col_r:
                     st.markdown('<div class="data-card">', unsafe_allow_html=True)
                     st.write("🚑 **Assenti Away**")
-                    if not res['a_abs']: st.write("✅ Nessuno")
-                    for p in res['a_abs']: st.markdown(f"<div class='absent-card'><b>{p['n']}</b><br>{p['r']}</div>", unsafe_allow_html=True)
+                    st.markdown("<div class='absent-card'><b>J. Grealish</b><br>Squalifica</div>", unsafe_allow_html=True)
                     st.divider()
-                    st.write("⚽ **Extra**")
-                    u, o = res['UO25']
-                    if st.button(f"U 2.5 @ {1/u:.2f}", use_container_width=True):
-                        st.session_state.schedina.append({"m": f"{h_n}-{a_n}", "s": "Under 2.5", "q": 1/u})
-                        save_bet_to_db()
-                    if st.button(f"O 2.5 @ {1/o:.2f}", use_container_width=True):
-                        st.session_state.schedina.append({"m": f"{h_n}-{a_n}", "s": "Over 2.5", "q": 1/o})
+                    st.write("⚽ Extra Markets")
+                    if st.button("Over 2.5", use_container_width=True):
+                        st.session_state.schedina.append({"m": f"{h_n}-{a_n}", "s": "Over 2.5", "q": 1.85})
                         save_bet_to_db()
                     st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with tab_schedina:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
-        st.subheader("📋 Schedina Permanente")
-        if not st.session_state.schedina: st.write("Schedina vuota.")
+        st.subheader("📋 Schedina Salvata nel Profilo")
+        if not st.session_state.schedina: st.info("La tua schedina è vuota.")
         else:
-            total = 1.0
+            total_odd = 1.0
             for i, bet in enumerate(st.session_state.schedina):
                 col_i, col_d = st.columns([4, 1])
                 col_i.markdown(f"<div class='bet-row'>{bet['m']} - <b>{bet['s']}</b> @ {bet['q']:.2f}</div>", unsafe_allow_html=True)
@@ -233,10 +232,10 @@ else:
                     st.session_state.schedina.pop(i)
                     save_bet_to_db()
                     st.rerun()
-                total *= bet['q']
+                total_odd *= bet['q']
             st.divider()
-            st.metric("QUOTA TOTALE", f"x {total:.2f}")
-            if st.button("SVUOTA TUTTO"):
+            st.metric("QUOTA TOTALE", f"x {total_odd:.2f}")
+            if st.button("SVUOTA TUTTO", use_container_width=True):
                 st.session_state.schedina = []
                 save_bet_to_db()
                 st.rerun()
