@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # --- 1. INIZIALIZZAZIONE SISTEMA E DATABASE ---
-st.set_page_config(page_title="NEURAL BET AI v6.0", page_icon="🏆", layout="wide")
+st.set_page_config(page_title="MOTORE NEURALE AI v6.0", page_icon="🏆", layout="wide")
 
 def init_db():
     """Inizializza il database SQLite per utenti e preferiti"""
@@ -51,18 +51,23 @@ class NeuralEngine:
             return "✅ ALTA PROBABILITÀ CASA", "#88ccff"
         return "⚠️ RISCHIO / EQUILIBRIO", "#ffaa00"
 
-# --- 3. STILE CSS CUSTOM (Include rimozione Menu e Footer) ---
+# --- 3. STILE CSS CUSTOM (Include rimozione totale menu, footer e tasti gestione) ---
 st.markdown("""
     <style>
-    /* Nasconde il menu (tre linee), l'header e il footer di Streamlit */
+    /* Nasconde il menu (tre linee), l'header, il footer e il tasto 'Manage App' */
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
     footer {visibility: hidden;}
     
+    /* Nasconde eventuali pulsanti di gestione o toolbar di Streamlit Cloud */
+    .stAppDeployButton {display: none;}
+    [data-testid="stCustomComponentToolbar"] {display: none;}
+    button[title="Manage app"] {display: none;}
+    
     /* Riduce lo spazio bianco in alto */
     .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
     }
 
     .stApp { background: #0e1117; }
@@ -95,12 +100,12 @@ if not st.session_state.logged_in:
     cols = st.columns([1, 1.5, 1])
     with cols[1]:
         st.title("🧠 Motore di Analisi Neurale")
-        tab1, tab2 = st.tabs(["🔑 Login", "📝 Registrazione"])
+        tab1, tab2 = st.tabs(["🔑 Accedi", "📝 Registrazione"])
         
         with tab1:
             u = st.text_input("Username")
             p = st.text_input("Password", type="password")
-            if st.button("ACCEDI"):
+            if st.button("LOG IN"):
                 conn = sqlite3.connect('neural_bet_pro.db')
                 res = conn.execute('SELECT password FROM users WHERE username=?', (u,)).fetchone()
                 conn.close()
@@ -125,8 +130,8 @@ if not st.session_state.logged_in:
 else:
     with st.sidebar:
         st.title(f"👤 {st.session_state.user}")
-        api_key = st.text_input("API Key Neural", type="password")
-        sport = st.selectbox("Lega", [
+        api_key = st.text_input("Chiave API Neural", type="password")
+        sport = st.selectbox("Campionato", [
             ("Serie A", "soccer_italy_serie_a"),
             ("Premier League", "soccer_epl"),
             ("La Liga", "soccer_spain_la_liga")
@@ -135,12 +140,12 @@ else:
             st.session_state.logged_in = False
             st.rerun()
 
-    st.title("🏟️ AI Strategy Dashboard")
+    st.title("🏟️ Dashboard Strategia AI")
     tab_scan, tab_favs = st.tabs(["🔍 Analisi Live", "⭐ Preferiti"])
 
     with tab_scan:
         if st.button("🚀 SCANSIONA MERCATI"):
-            if not api_key: st.warning("Inserisci l'API Key a sinistra.")
+            if not api_key: st.warning("Inserisci la Chiave API a sinistra.")
             else:
                 try:
                     url = f'https://api.the-odds-api.com/v4/sports/{sport[1]}/odds/?apiKey={api_key}&regions=eu'
