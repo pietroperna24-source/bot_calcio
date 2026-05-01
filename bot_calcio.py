@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 API_KEY = "ea1f03fb102749fa9140e20b184f2996" 
 BASE_URL = "https://api.football-data.org/v4/"
 
-# --- 2. DATABASE CON SISTEMA DI MIGRAZIONE ---
+# --- 2. DATABASE ---
 def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
@@ -23,7 +23,7 @@ def init_db():
     try:
         c.execute("ALTER TABLE users ADD COLUMN theme TEXT DEFAULT '#3b82f6'")
     except sqlite3.OperationalError:
-        pass # Colonna già esistente
+        pass
     conn.commit()
     conn.close()
 
@@ -59,8 +59,8 @@ def get_deep_analysis():
         "wet": random.choice(["Sereno 22°C", "Pioggia 14°C", "Nuvoloso 18°C"])
     }
 
-# --- 5. UI & STILE DINAMICO ---
-st.set_page_config(page_title="AI NEURAL COMMANDER v19", layout="wide")
+# --- 5. UI & STILE (CORRETTO CON DOPPIE GRAFFE) ---
+st.set_page_config(page_title="AI NEURAL COMMANDER v19.1", layout="wide")
 t_color = st.session_state.theme_color
 
 st.markdown(f"""
@@ -70,10 +70,23 @@ st.markdown(f"""
     .data-card {{
         background: linear-gradient(145deg, rgba(15, 23, 42, 0.5), rgba(30, 41, 59, 0.3));
         border: 1px solid {t_color}66;
-        border-radius: 20px; padding: 20px; margin-bottom: 15px; backdrop-filter: blur(10px);
-    }
-    .bet-row {{ background: rgba(16, 185, 129, 0.1); border-radius: 10px; padding: 10px; margin-bottom: 8px; border-left: 4px solid #10b981; }}
-    .terminal-text {{ font-family: 'Courier New', monospace; color: #10b981; font-size: 0.85rem; }}
+        border-radius: 20px; 
+        padding: 20px; 
+        margin-bottom: 15px; 
+        backdrop-filter: blur(10px);
+    }}
+    .bet-row {{ 
+        background: rgba(16, 185, 129, 0.1); 
+        border-radius: 10px; 
+        padding: 10px; 
+        margin-bottom: 8px; 
+        border-left: 4px solid #10b981; 
+    }}
+    .terminal-text {{ 
+        font-family: 'Courier New', monospace; 
+        color: #10b981; 
+        font-size: 0.85rem; 
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -115,7 +128,7 @@ if not st.session_state.logged_in:
                     conn.close()
         st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 7. AREA MEMBRI (DOPO LOGIN) ---
+# --- 7. AREA MEMBRI (DENTRO) ---
 else:
     t1, t2, t3 = st.tabs(["🚀 ANALISI LIVE", "📝 SCHEDINA", "⚙️ IMPOSTAZIONI"])
 
@@ -171,7 +184,7 @@ else:
                     cols = st.columns(3)
                     for i, lab in enumerate(['1', 'X', '2']):
                         q = 1/res['1X2'][i]
-                        if cols[i].button(f"{lab} @ {q:.2f}", use_container_width=True):
+                        if cols[i].button(f"{lab} @ {q:.2f}", use_container_width=True, key=f"btn_{i}"):
                             st.session_state.schedina.append({"m": f"{h_n}-{a_n}", "s": lab, "q": q})
                             save_bet_to_db(); st.toast("Aggiunto!")
                     
@@ -189,7 +202,7 @@ else:
                     u, o = res['UO25']
                     if st.button(f"Over 2.5 @ {1/o:.2f}", use_container_width=True):
                         st.session_state.schedina.append({"m": f"{h_n}-{a_n}", "s": "O2.5", "q": 1/o})
-                        save_bet_to_db()
+                        save_bet_to_db(); st.toast("Aggiunto!")
                     st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -206,23 +219,20 @@ else:
                     st.session_state.schedina.pop(i); save_bet_to_db(); st.rerun()
                 total *= bet['q']
             st.metric("QUOTA TOTALE", f"x {total:.2f}")
-            if st.button("SVUOTA SCHEDINA"):
+            if st.button("SVUOTA TUTTO"):
                 st.session_state.schedina = []; save_bet_to_db(); st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
     with t3:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
         st.subheader("⚙️ Impostazioni")
-        # Cambio Tema
         new_c = st.color_picker("Colore Tema", t_color)
         if st.button("Salva Colore"):
             st.session_state.theme_color = new_c
             conn = sqlite3.connect('users.db'); c = conn.cursor()
             c.execute("UPDATE users SET theme = ? WHERE username = ?", (new_c, st.session_state.user))
             conn.commit(); conn.close(); st.rerun()
-        
         st.divider()
-        # Logout
         if st.button("🚪 LOGOUT", use_container_width=True, type="primary"):
             st.session_state.logged_in = False
             st.session_state.user = ""
