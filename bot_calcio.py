@@ -6,10 +6,10 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 # --- 1. CONFIGURAZIONE API ---
-API_KEY = "ea1f03fb102749fa9140e20b184f2996" 
+API_KEY = "LA_TUA_API_KEY" 
 BASE_URL = "https://api.football-data.org/v4/"
 
-# --- 2. UI & CSS OTTIMIZZATO ---
+# --- 2. UI & CSS AVANZATO ---
 st.set_page_config(page_title="AI NEURAL COMMANDER PRO", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
@@ -18,10 +18,6 @@ st.markdown("""
     footer { visibility: hidden; }
     .stApp { background-color: #05070a; color: #e0e0e0; }
     
-    @media (max-width: 768px) {
-        [data-testid="column"] { width: 100% !important; flex: 1 1 100% !important; }
-    }
-
     .data-card {
         background: rgba(30, 41, 59, 0.25);
         border: 1px solid rgba(59, 130, 246, 0.2);
@@ -38,41 +34,58 @@ st.markdown("""
         border-radius: 5px;
         margin: 10px 0;
         font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
     }
 
-    .market-label { color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: bold; }
-    .market-val { font-size: 1.2rem; font-weight: 700; color: #3b82f6; }
+    .absent-card {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        padding: 10px;
+        border-radius: 10px;
+        margin-top: 5px;
+    }
+
+    .player-name { color: #ef4444; font-weight: bold; }
+    .player-reason { color: #94a3b8; font-size: 0.8rem; }
     
-    .score-badge {
-        background: #1e293b;
-        padding: 5px 12px;
-        border-radius: 8px;
-        border: 1px solid #3b82f6;
-        display: inline-block;
-        margin: 5px;
+    .status-badge {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: bold;
+        text-transform: uppercase;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. LOGICA DI CALCOLO AVANZATA ---
-def get_detailed_analysis():
-    # Simulazione di metriche statistiche reali
-    p1, px, p2 = random.uniform(0.4, 0.6), random.uniform(0.2, 0.3), random.uniform(0.1, 0.3)
-    total = p1 + px + p2
-    p1, px, p2 = p1/total, px/total, p2/total
+# --- 3. LOGICA DI GENERAZIONE DETTAGLI (SIMULAZIONE INTELLIGENTE) ---
+def get_match_details(h_name, a_name):
+    # Simulazione database infortunati/assenti per il 2026
+    reasons = ["Infortunio Muscolare", "Rottura Legamenti", "Squalifica (Somma ammonizioni)", "Problema Fisico (Dubbio)", "Squalifica (Rosso diretto)"]
     
+    def generate_players(team):
+        players = ["M. Rossi", "J. Doe", "L. Martinez", "K. Benzema", "G. Silva", "A. Muller", "P. Pogba", "V. Junior"]
+        num = random.randint(0, 3)
+        return [{"name": random.choice(players), "reason": random.choice(reasons)} for _ in range(num)]
+
     return {
-        "win_probs": [p1, px, p2],
-        "uo25": [random.uniform(0.4, 0.6), random.uniform(0.4, 0.6)],
-        "power_index": {"home": random.randint(75, 98), "away": random.randint(65, 92)},
-        "exact_scores": [("2-1", "14%"), ("1-0", "12%"), ("1-1", "10%")],
-        "tactical_note": random.choice([
-            "Alta pressione offensiva prevista per i padroni di casa.",
-            "Squadra ospite focalizzata su contropiedi rapidi.",
-            "Match equilibrato a centrocampo, attesi pochi spazi.",
-            "Difesa ospite vulnerabile sui calci piazzati."
+        "home_absents": generate_players(h_name),
+        "away_absents": generate_players(a_name),
+        "referee": random.choice(["D. Orsato", "M. Oliver", "S. Marciniak", "C. Turpin"]),
+        "weather": random.choice(["Sereno (22°C)", "Pioggia Leggera (14°C)", "Nuvoloso (18°C)", "Umidità Elevata (26°C)"]),
+        "stadium_fill": random.randint(85, 100),
+        "tactical_focus": random.choice([
+            "Focus su transizioni rapide e contropiede.",
+            "Possesso palla prolungato e costruzione dal basso.",
+            "Difesa a blocco basso e ripartenze fulminee.",
+            "Pressione alta costante per indurre all'errore."
         ])
     }
+
+def get_neural_probs():
+    p1, px, p2 = random.uniform(0.4, 0.6), random.uniform(0.2, 0.3), random.uniform(0.1, 0.3)
+    t = p1 + px + p2
+    return [p1/t, px/t, p2/t]
 
 def fetch_matches(league_code):
     headers = {'X-Auth-Token': API_KEY}
@@ -82,12 +95,8 @@ def fetch_matches(league_code):
         return res.json().get('matches', [])
     except: return []
 
-def format_time(iso_date):
-    dt = datetime.fromisoformat(iso_date.replace('Z', '+00:00')) + timedelta(hours=2)
-    return dt.strftime("%H:%M")
-
 # --- 4. MAIN APP ---
-st.title("🛡️ AI NEURAL COMMANDER v9.0")
+st.title("🛡️ AI NEURAL COMMANDER v9.5")
 
 # Selettore Campionato
 st.markdown('<div class="data-card">', unsafe_allow_html=True)
@@ -96,75 +105,68 @@ with c1:
     league = st.selectbox("🏆 Campionato", ["Serie A (SA)", "Premier League (PL)", "La Liga (PD)"])
     l_code = league.split("(")[1].replace(")", "")
 with c2:
-    if st.button("🔄 SINCRONIZZA EVENTI LIVE", use_container_width=True):
+    if st.button("🔄 SINCRONIZZA CALENDARIO LIVE", use_container_width=True):
         st.session_state.matches = fetch_matches(l_code)
 
 matches = st.session_state.get('matches', [])
 
 if matches:
-    labels = [f"{format_time(m['utcDate'])} | {m['homeTeam']['name']} vs {m['awayTeam']['name']}" for m in matches]
-    selected = st.selectbox("🔍 Seleziona Match per Intelligence Report:", ["--- Seleziona ---"] + labels)
+    labels = [f"{datetime.fromisoformat(m['utcDate'].replace('Z', '+00:00')).strftime('%H:%M')} | {m['homeTeam']['name']} vs {m['awayTeam']['name']}" for m in matches]
+    selected = st.selectbox("🔍 Seleziona Match per Report Dettagliato:", ["--- Seleziona ---"] + labels)
 
     if selected != "--- Seleziona ---":
-        m_data = matches[labels.index(selected)]
+        m_idx = labels.index(selected)
+        m_data = matches[m_idx]
         h_name, a_name = m_data['homeTeam']['name'], m_data['awayTeam']['name']
         
-        with st.status("🧬 Estrazione Dati Neurali...", expanded=True) as s:
-            time.sleep(0.7)
-            data = get_detailed_analysis()
-            s.update(label="Analisi Completata!", state="complete")
+        with st.status("🧬 Deep Scanning Evento in corso...", expanded=True) as s:
+            time.sleep(0.8)
+            details = get_match_details(h_name, a_name)
+            probs = get_neural_probs()
+            s.update(label="Analisi Giocatori e Tattica Completata!", state="complete")
 
-        # --- REPORT DETTAGLIATO ---
-        st.markdown(f"<div style='text-align:center;'><h1>{h_name.upper()} vs {a_name.upper()}</h1></div>", unsafe_allow_html=True)
+        # --- LAYOUT REPORT ---
+        st.markdown(f"<div style='text-align:center;'><h2>{h_name.upper()} vs {a_name.upper()}</h2></div>", unsafe_allow_html=True)
         
-        col_main, col_side = st.columns([2, 1])
+        col_stats, col_details = st.columns([1.5, 1])
 
-        with col_main:
+        with col_stats:
             st.markdown('<div class="data-card">', unsafe_allow_html=True)
             st.subheader("📊 Analisi Probabilistica")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("1", f"{probs[0]*100:.1f}%")
+            c2.metric("X", f"{probs[1]*100:.1f}%")
+            c3.metric("2", f"{probs[2]*100:.1f}%")
             
-            # Grafico 1X2
-            fig = go.Figure(go.Bar(
-                x=['1', 'X', '2'], 
-                y=[data['win_probs'][0]*100, data['win_probs'][1]*100, data['win_probs'][2]*100],
-                marker_color=['#3b82f6', '#1e293b', '#ef4444']
-            ))
-            fig.update_layout(height=250, margin=dict(t=10,b=10,l=10,r=10), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # Dettagli Tecnici
             st.markdown(f"""
             <div class="neural-box">
-                <b>🤖 AI INSIGHT:</b><br>
-                {data['tactical_note']}<br><br>
-                <b>FORMA TEAM:</b><br>
-                {h_name}: {data['power_index']['home']}% | {a_name}: {data['power_index']['away']}%
+                <b>🤖 FOCUS TATTICO:</b><br>{details['tactical_focus']}<br><br>
+                <b>📢 CLIMA MATCH:</b> {details['weather']}<br>
+                <b>🏟️ RIEMPIMENTO STADIO:</b> {details['stadium_fill']}%<br>
+                <b>⚖️ ARBITRO:</b> {details['referee']}
             </div>
             """, unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        with col_side:
+        with col_details:
             st.markdown('<div class="data-card">', unsafe_allow_html=True)
-            st.subheader("🎯 Pronostici Extra")
+            st.subheader("🚑 Bollettino Assenti")
             
-            # Risultati Esatti
-            st.write("**Risultati Esatti Probabili:**")
-            for score, prob in data['exact_scores']:
-                st.markdown(f"<div class='score-badge'>{score} <small>({prob})</small></div>", unsafe_allow_html=True)
+            # Assenti Casa
+            st.write(f"**{h_name}**")
+            if not details['home_absents']: st.write("✅ Rosa completa")
+            for p in details['home_absents']:
+                st.markdown(f"""<div class='absent-card'><span class='player-name'>{p['name']}</span><br><span class='player-reason'>{p['reason']}</span></div>""", unsafe_allow_html=True)
             
-            st.divider()
+            st.write("")
+            # Assenti Trasferta
+            st.write(f"**{a_name}**")
+            if not details['away_absents']: st.write("✅ Rosa completa")
+            for p in details['away_absents']:
+                st.markdown(f"""<div class='absent-card'><span class='player-name'>{p['name']}</span><br><span class='player-reason'>{p['reason']}</span></div>""", unsafe_allow_html=True)
             
-            # Mercati Veloci
-            st.markdown(f"<span class='market-label'>Under 2.5:</span> <span class='market-val'>{data['uo25'][0]*100:.0f}%</span>", unsafe_allow_html=True)
-            st.markdown(f"<br><span class='market-label'>Over 2.5:</span> <span class='market-val'>{data['uo25'][1]*100:.0f}%</span>", unsafe_allow_html=True)
-            
-            st.divider()
-            
-            # Quota Suggerita
-            fair_odd = 1/data['win_probs'][0] if data['win_probs'][0] > data['win_probs'][2] else 1/data['win_probs'][2]
-            st.success(f"💎 Value Bet: **{fair_odd:.2f}**")
             st.markdown('</div>', unsafe_allow_html=True)
 
 else:
-    st.info("Sincronizza per visualizzare i match e i dettagli dell'IA.")
+    st.info("Sincronizza per visualizzare i match programmati.")
 st.markdown('</div>', unsafe_allow_html=True)
