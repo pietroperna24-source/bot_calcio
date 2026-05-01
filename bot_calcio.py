@@ -3,115 +3,136 @@ import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime
 
-# --- 1. DATABASE SQUADRE (Power Index) ---
+# --- 1. DATABASE COMPLETO SQUADRE (Power Index Europeo) ---
 TEAMS_DB = {
-    "Inter": 90, "Milan": 84, "Juventus": 83, "Napoli": 81, "Atalanta": 82,
-    "Roma": 78, "Lazio": 77, "Bologna": 76, "Fiorentina": 75, "Torino": 73,
-    "Real Madrid": 96, "Man City": 95, "Liverpool": 93, "Arsenal": 92, "Bayern Munich": 90
+    "Italia - Serie A": {
+        "Inter": 91, "Milan": 85, "Juventus": 84, "Napoli": 82, "Atalanta": 83, 
+        "Roma": 79, "Lazio": 78, "Fiorentina": 77, "Bologna": 78, "Torino": 74
+    },
+    "Inghilterra - Premier League": {
+        "Man City": 96, "Arsenal": 93, "Liverpool": 94, "Aston Villa": 84, 
+        "Tottenham": 83, "Man United": 81, "Newcastle": 82, "Chelsea": 80
+    },
+    "Spagna - La Liga": {
+        "Real Madrid": 97, "Barcelona": 89, "Girona": 84, "Atletico Madrid": 86, 
+        "Athletic Bilbao": 82, "Real Sociedad": 81, "Betis": 79
+    },
+    "Germania - Bundesliga": {
+        "Bayer Leverkusen": 90, "Bayern Munich": 91, "Stuttgart": 84, 
+        "RB Leipzig": 85, "Borussia Dortmund": 86, "Eintracht Frankfurt": 80
+    },
+    "Francia - Ligue 1": {
+        "PSG": 88, "Monaco": 82, "Brest": 79, "Lille": 81, "Nice": 78, "Lyon": 77
+    }
 }
 
-# --- 2. PALINSESTO PARTITE (Calendario Programmato) ---
-# Qui inserisci le partite in programma. L'IA le caricherà in automatico.
-SCHEDULED_MATCHES = [
-    {"data": "2026-05-02", "lega": "Serie A", "home": "Inter", "away": "Milan"},
-    {"data": "2026-05-02", "lega": "Serie A", "home": "Juventus", "away": "Napoli"},
-    {"data": "2026-05-03", "lega": "Champions League", "home": "Real Madrid", "away": "Man City"},
-    {"data": "2026-05-03", "lega": "Serie A", "home": "Roma", "away": "Lazio"},
-    {"data": "2026-05-04", "lega": "Premier League", "home": "Liverpool", "away": "Arsenal"}
+# --- 2. CATALOGO PARTITE IN PROGRAMMA (Palinsesto) ---
+# Aggiungi qui le partite per ogni weekend
+EUROPEAN_SCHEDULE = [
+    {"data": "2026-05-02", "campionato": "Italia - Serie A", "home": "Inter", "away": "Milan"},
+    {"data": "2026-05-02", "campionato": "Inghilterra - Premier League", "home": "Arsenal", "away": "Liverpool"},
+    {"data": "2026-05-03", "campionato": "Spagna - La Liga", "home": "Real Madrid", "away": "Barcelona"},
+    {"data": "2026-05-03", "campionato": "Germania - Bundesliga", "home": "Bayern Munich", "away": "Bayer Leverkusen"},
+    {"data": "2026-05-04", "campionato": "Francia - Ligue 1", "home": "PSG", "away": "Monaco"},
 ]
 
-# --- 3. CONFIGURAZIONE PAGINA E CSS ---
-st.set_page_config(page_title="AI CALENDAR PREDICTOR", layout="wide")
+# --- 3. CONFIGURAZIONE E STILE ---
+st.set_page_config(page_title="AI EUROPEAN CATALOG", layout="wide")
 
 st.markdown("""
     <style>
     #MainMenu, header, footer {visibility: hidden; display: none !important;}
-    .stApp { background: #0e1117; }
-    .match-card { 
-        background: #161b22; border-radius: 15px; padding: 20px; 
-        border: 1px solid #30363d; margin-bottom: 15px;
+    .stApp { background: #0b0e14; }
+    .league-header {
+        background: linear-gradient(90deg, #1f2937, #111827);
+        padding: 10px 20px; border-radius: 10px; border-left: 5px solid #3b82f6; margin-bottom: 20px;
+    }
+    .match-box {
+        background: #161b22; border: 1px solid #30363d;
+        border-radius: 12px; padding: 20px; margin-bottom: 15px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. MOTORE DI CALCOLO ---
-def get_prediction(home, away):
-    ph = TEAMS_DB.get(home, 50)
-    pa = TEAMS_DB.get(away, 50)
+# --- 4. MOTORE ANALITICO ---
+def analyze_match(home, away, campionato):
+    db = TEAMS_DB.get(campionato, {})
+    ph = db.get(home, 70)
+    pa = db.get(away, 70)
     
-    # Calcolo probabilistico con vantaggio casa
-    score_h = ph + 6 
+    # Calcolo pesato (Fattore campo +10%)
+    score_h = ph * 1.10
     score_a = pa
     total = score_h + score_a
     
-    p1 = (score_h / total) * 1.05
-    p2 = (score_a / total) * 0.95
-    px = 1.0 - (p1 + p2)
+    p1 = score_h / total
+    p2 = score_a / total
+    px = 0.26  # Pareggio base statistico europeo
     
-    # Normalizzazione
-    if px < 0.22: px = 0.25
-    norm = p1 + px + p2
-    return {"1": p1/norm, "X": px/norm, "2": p2/norm}
+    # Normalizzazione per somma 1.0
+    sum_p = p1 + p2 + px
+    return {"1": p1/sum_p, "X": px/sum_p, "2": p2/sum_p}
 
 # --- 5. INTERFACCIA ---
-st.title("📅 AI Sport Planner 2026")
-st.write("Analisi automatica delle partite in programma nel database interno.")
+st.title("🇪🇺 Catalogo AI Pronostici Europei 2026")
 
-# Sidebar per filtri
+# Filtri Sidebar
 with st.sidebar:
-    st.header("Filtra Palinsesto")
-    date_filter = st.date_input("Seleziona Data", datetime.strptime("2026-05-02", "%Y-%m-%d"))
-    date_str = date_filter.strftime("%Y-%m-%d")
-
-# Filtriamo i match in base alla data scelta
-matches_today = [m for m in SCHEDULED_MATCHES if m['data'] == date_str]
-
-if not matches_today:
-    st.info(f"Nessuna partita in programma per il {date_str}. Prova il 2026-05-02 o 2026-05-03.")
-else:
-    st.subheader(f"Partite del {date_str}")
+    st.image("https://img.icons8.com/fluency/96/football.png", width=80)
+    st.header("Filtra Catalogo")
+    selected_date = st.date_input("Data Eventi", datetime.strptime("2026-05-02", "%Y-%m-%d"))
+    date_str = selected_date.strftime("%Y-%m-%d")
     
-    for match in matches_today:
-        res = get_prediction(match['home'], match['away'])
+    selected_league = st.multiselect(
+        "Seleziona Campionati", 
+        list(TEAMS_DB.keys()), 
+        default=list(TEAMS_DB.keys())
+    )
+
+# Visualizzazione Palinsesto
+matches_filtered = [
+    m for m in EUROPEAN_SCHEDULE 
+    if m['data'] == date_str and m['campionato'] in selected_league
+]
+
+if not matches_filtered:
+    st.info(f"Nessun evento a catalogo per il {date_str} nei campionati selezionati.")
+else:
+    # Raggruppiamo per campionato per ordine visivo
+    current_league = ""
+    for match in matches_filtered:
+        if match['campionato'] != current_league:
+            current_league = match['campionato']
+            st.markdown(f'<div class="league-header"><h3>⚽ {current_league}</h3></div>', unsafe_allow_html=True)
+        
+        res = analyze_match(match['home'], match['away'], match['campionato'])
         
         with st.container():
-            st.markdown(f'''
-            <div class="match-card">
-                <span style="color: #888;">{match['lega']}</span>
-                <h2 style="margin: 0;">{match['home']} vs {match['away']}</h2>
-            </div>
-            ''', unsafe_allow_html=True)
+            st.markdown(f'<div class="match-box">', unsafe_allow_html=True)
+            col1, col2, col3 = st.columns([2, 2, 1])
             
-            c1, c2, c3 = st.columns([1, 2, 1])
+            with col1:
+                st.write(f"#### {match['home']} vs {match['away']}")
+                st.write(f"⏱️ Data: {match['data']}")
+                st.write(f"📊 **Power Index:** {TEAMS_DB[match['campionato']][match['home']]} vs {TEAMS_DB[match['campionato']][match['away']]}")
             
-            with c1:
-                st.write("### 📈 Probabilità")
-                st.write(f"**1**: {res['1']:.1%}")
-                st.write(f"**X**: {res['X']:.1%}")
-                st.write(f"**2**: {res['2']:.1%}")
-            
-            with c2:
-                # Grafico rapido
+            with col2:
+                # Grafico delle percentuali
                 fig = go.Figure(go.Bar(
                     x=['1', 'X', '2'],
                     y=[res['1'], res['X'], res['2']],
-                    marker_color=['#22c55e', '#6b7280', '#ef4444']
+                    marker_color=['#22c55e', '#94a3b8', '#ef4444'],
+                    text=[f"{res['1']:.0%}", f"{res['X']:.0%}", f"{res['2']:.0%}"],
+                    textposition='auto',
                 ))
-                fig.update_layout(height=150, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
+                fig.update_layout(height=120, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), xaxis=dict(visible=True), yaxis=dict(visible=False))
                 st.plotly_chart(fig, use_container_width=True)
                 
-            with c3:
-                st.write("### 🤖 Verdetto")
-                if res['1'] > 0.55: st.success("Punta sull'1")
-                elif res['2'] > 0.55: st.success("Punta sul 2")
-                else: st.warning("Partita da X")
-            st.divider()
-
-# --- 6. AGGIUNTA MANUALE (Opzionale) ---
-with st.expander("➕ Aggiungi una partita al volo"):
-    col1, col2, col3 = st.columns(3)
-    with col1: h_new = st.selectbox("Casa", list(TEAMS_DB.keys()), key="h")
-    with col2: a_new = st.selectbox("Trasferta", list(TEAMS_DB.keys()), key="a")
-    if st.button("Analizza Partita Extra"):
-        r_extra = get_prediction(h_new, a_new)
-        st.write(f"Risultato Analisi: **1**: {r_extra['1']:.1%} | **X**: {r_extra['X']:.1%} | **2**: {r_extra['2']:.1%}")
+            with col3:
+                st.write("### AI Verdetto")
+                prob_max = max(res.values())
+                if res['1'] == prob_max: st.success("🎯 SEGNO: 1")
+                elif res['2'] == prob_max: st.error("🎯 SEGNO: 2")
+                else: st.warning("🎯 SEGNO: X")
+            
+            st.markdown('</div>', unsafe_allow_html=True)
