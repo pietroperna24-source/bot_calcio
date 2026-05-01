@@ -1,6 +1,7 @@
 import streamlit as st
 import time
 import requests
+import random  # <--- FONDAMENTALE per correggere il tuo errore
 import plotly.graph_objects as go
 from datetime import datetime
 
