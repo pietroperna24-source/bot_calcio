@@ -99,7 +99,7 @@ else:
         try:
             url = "https://api-football-v1.p.rapidapi.com/v3/odds"
             # Parametri aggiornati per la stagione 2024
-            querystring = {"league": sport_id[1], "season": "2024", "bookmaker": "6"} 
+            querystring = {"league": sport_id[1], "season": "2026", "bookmaker": "6"} 
             headers = {
                 "X-RapidAPI-Key": RAPID_KEY,
                 "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"
