@@ -1,152 +1,128 @@
 import streamlit as st
-import requests
-import sqlite3
-import hashlib
 import pandas as pd
 import plotly.graph_objects as go
-from datetime import datetime
+import math
 
-# --- CONFIGURAZIONE ---
-st.set_page_config(page_title="AI PREDICTOR 2026", page_icon="🤖", layout="wide")
+# --- CONFIGURAZIONE PAGINA ---
+st.set_page_config(page_title="AI NEURAL ANALYST - OFFLINE", page_icon="🧠", layout="wide")
 
-def init_db():
-    conn = sqlite3.connect('neural_bet_pro.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)''')
-    conn.commit()
-    conn.close()
-
-def hash_pwd(pwd):
-    return hashlib.sha256(str.encode(pwd)).hexdigest()
-
-init_db()
-
-# --- MOTORE DI ANALISI PROBABILISTICA ---
-class NeuralEngine:
+# --- LOGICA DI CALCOLO NEURALE ---
+class NeuralProcessor:
     @staticmethod
-    def calculate_probs(o1, ox, o2):
-        # Rimozione dell'aggio (margine del bookmaker)
+    def analyze_data(o1, ox, o2):
+        # Calcolo del Margine (Aggio)
         margin = (1/o1) + (1/ox) + (1/o2)
+        # Probabilità reali (Normalizzate)
         p1 = (1/o1) / margin
         px = (1/ox) / margin
         p2 = (1/o2) / margin
-        return {"p1": p1, "px": px, "p2": p2, "fair_o1": 1/p1}
+        
+        # Fair Odds (Quote eque senza profitto bookmaker)
+        fair_o1 = 1/p1
+        fair_ox = 1/px
+        fair_o2 = 1/p2
+        
+        return {
+            "p1": p1, "px": px, "p2": p2,
+            "fair": [fair_o1, fair_ox, fair_o2],
+            "aggio": (margin - 1) * 100
+        }
 
-    @staticmethod
-    def get_ai_advice(p1, o1):
-        # Valutazione del valore matematico (Value Bet)
-        value = (o1 * p1) - 1
-        if value > 0.07:
-            return f"🔥 PRONOSTICO: VALUE DETECTED (+{value:.1%})", "#00ff00"
-        elif p1 > 0.65:
-            return "✅ PRONOSTICO: PROBABILITÀ MOLTO ALTA", "#88ccff"
-        elif p1 > 0.45:
-            return "⚖️ PRONOSTICO: EQUILIBRIO / MODERATO", "#ffaa00"
-        else:
-            return "⚠️ PRONOSTICO: RISCHIO ELEVATO", "#ff4b4b"
-
-# --- INTERFACCIA E CSS ---
+# --- CSS PER PULIZIA INTERFACCIA ---
 st.markdown("""
     <style>
     #MainMenu, header, footer {visibility: hidden; display: none !important;}
-    .stAppDeployButton, button[title="Manage app"] {display: none !important;}
     .stApp { background: #0e1117; }
     .main-card { 
         background: #161b22; border-radius: 15px; padding: 25px; 
         border: 1px solid #30363d; margin-bottom: 20px;
     }
+    .stNumberInput div div input { background-color: #1f2937 !important; color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- SISTEMA DI ACCESSO ---
-if 'auth' not in st.session_state:
-    st.session_state.auth = False
+# --- INTERFACCIA PRINCIPALE ---
+st.title("🧠 AI Neural Analyst")
+st.subheader("Inserimento manuale dati per analisi istantanea")
 
-if not st.session_state.auth:
-    cols = st.columns([1, 1.5, 1])
-    with cols[1]:
-        st.title("🤖 AI Match Analyst")
-        u, p = st.text_input("Utente"), st.text_input("Password", type="password")
-        if st.button("ACCEDI ALL'ANALISI"):
-            # Logica semplificata per velocità
-            st.session_state.auth = True
-            st.rerun()
-else:
-    # --- DASHBOARD DI ANALISI ---
-    try:
-        API_KEY = st.secrets["RAPID_API_KEY"]
-    except:
-        st.error("Configura 'RAPID_API_KEY' nei Secrets di Streamlit Cloud.")
-        API_KEY = None
+with st.container():
+    st.markdown('<div class="main-card">', unsafe_allow_html=True)
+    col_in1, col_in2, col_in3 = st.columns(3)
+    
+    with col_in1:
+        o1 = st.number_input("Quota Segno 1", min_value=1.01, value=2.10, step=0.01)
+    with col_in2:
+        ox = st.number_input("Quota Segno X", min_value=1.01, value=3.40, step=0.01)
+    with col_in3:
+        o2 = st.number_input("Quota Segno 2", min_value=1.01, value=3.80, step=0.01)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    with st.sidebar:
-        st.header("⚙️ Parametri AI")
-        league = st.selectbox("Campionato", [
-            ("Serie A", "135"), ("Premier League", "39"), 
-            ("La Liga", "140"), ("Bundesliga", "78")
-        ])
-        # Nel maggio 2026 la stagione attiva è la 2025
-        season = st.selectbox("Stagione", ["2025", "2026"])
-        if st.button("Logout"):
-            st.session_state.auth = False
-            st.rerun()
+# --- ELABORAZIONE AI ---
+if st.button("🚀 ELABORA VALUTAZIONE NEURALE"):
+    data = NeuralProcessor.analyze_data(o1, ox, o2)
+    
+    # --- VISUALIZZAZIONE RISULTATI ---
+    c1, c2 = st.columns([1, 1])
+    
+    with c1:
+        st.markdown('<div class="main-card">', unsafe_allow_html=True)
+        st.write("### 📊 Probabilità Reali")
+        
+        # Grafico a Torta
+        fig = go.Figure(data=[go.Pie(
+            labels=['Vittoria Casa (1)', 'Pareggio (X)', 'Vittoria Trasferta (2)'],
+            values=[data['p1'], data['px'], data['p2']],
+            hole=.4,
+            marker_colors=['#22c55e', '#6b7280', '#ef4444']
+        )])
+        fig.update_layout(
+            showlegend=True, 
+            paper_bgcolor='rgba(0,0,0,0)', 
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color="white"),
+            margin=dict(t=0, b=0, l=0, r=0)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    st.title("🏟️ Valutazione Partite & Percentuali AI")
-
-    if API_KEY and st.button("🔍 ANALIZZA PROSSIMI EVENTI"):
-        try:
-            url = "https://api-football-v1.p.rapidapi.com/v3/odds"
-            # Bookmaker 1 = Bet365 (solitamente il più fornito)
-            query = {"league": league[1], "season": season, "bookmaker": "1"}
-            headers = {"X-RapidAPI-Key": API_KEY, "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"}
+    with c2:
+        st.markdown('<div class="main-card">', unsafe_allow_html=True)
+        st.write("### 🤖 Verdetto AI")
+        
+        # Calcolo Value Bet
+        # Se la probabilità reale è più alta di quella implicita nella quota, c'è valore
+        st.metric("Aggio Bookmaker", f"{data['aggio']:.2f}%", delta_color="inverse")
+        
+        st.write("---")
+        st.write("**Quote Eque Calcolate (Fair Odds):**")
+        st.write(f"1: :green[{data['fair'][0]:.2f}] | X: :gray[{data['fair'][1]:.2f}] | 2: :red[{data['fair'][2]:.2f}]")
+        
+        st.write("---")
+        # Logica di consiglio
+        if data['aggio'] > 10:
+            st.warning("⚠️ ATTENZIONE: Questo bookmaker sta applicando un aggio molto alto (>10%). Le quote non sono convenienti.")
+        
+        # Valutazione Segno 1
+        diff = (o1 * data['p1']) - 1
+        if diff > 0.05:
+            st.success(f"✅ VALORE TROVATO SUL SEGNO 1: +{diff:.1%}")
+        elif data['p1'] > 0.60:
+            st.info("🔥 PROBABILITÀ ELEVATA SEGNO 1 (Oltre 60%)")
+        else:
+            st.write("❌ Nessun valore matematico evidente al momento.")
             
-            response = requests.get(url, headers=headers, params=query).json()
-            matches = response.get('response', [])
+        st.markdown('</div>', unsafe_allow_html=True)
 
-            if not matches:
-                st.warning("Nessun dato disponibile. Verifica che la stagione selezionata sia corretta.")
+    # --- TABELLA DI CONFRONTO ---
+    st.write("### 🔍 Tabella di Riepilogo")
+    df_res = pd.DataFrame({
+        "Evento": ["Vittoria Casa (1)", "Pareggio (X)", "Vittoria Trasferta (2)"],
+        "Tua Quota": [o1, ox, o2],
+        "Quota Equa AI": [round(x, 2) for x in data['fair']],
+        "Probabilità Reale": [f"{round(x*100, 1)}%" for x in [data['p1'], data['px'], data['p2']]]
+    })
+    st.table(df_res)
 
-            for item in matches:
-                bookie = item['bookmakers'][0]
-                bet = next((b for b in bookie['bets'] if b['id'] == 1), None)
-                
-                if bet:
-                    v = bet['values']
-                    o1, ox, o2 = float(v[0]['odd']), float(v[1]['odd']), float(v[2]['odd'])
-                    t1, t2 = v[0]['value'], v[2]['value']
-
-                    # Esecuzione calcoli AI
-                    analysis = NeuralEngine.calculate_probs(o1, ox, o2)
-                    advice, color = NeuralEngine.get_ai_advice(analysis['p1'], o1)
-
-                    with st.container():
-                        st.markdown(f"""
-                        <div class="main-card">
-                            <h2 style="margin-bottom:0;">{t1} vs {t2}</h2>
-                            <p style="color:{color}; font-weight:bold; font-size:1.2rem;">{advice}</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        c1, c2 = st.columns([1, 1])
-                        with c1:
-                            # Grafico a torta delle percentuali
-                            fig = go.Figure(data=[go.Pie(
-                                labels=[t1, 'Pareggio', t2],
-                                values=[analysis['p1'], analysis['px'], analysis['p2']],
-                                hole=.4,
-                                marker_colors=['#00ff00', '#555', '#ff4b4b']
-                            )])
-                            fig.update_layout(height=250, showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
-                            st.plotly_chart(fig, use_container_width=True)
-                        
-                        with c2:
-                            st.write("### 📊 Analisi Statistica")
-                            st.write(f"🔹 **Probabilità {t1}:** {analysis['p1']:.1%}")
-                            st.write(f"🔹 **Probabilità Pareggio:** {analysis['px']:.1%}")
-                            st.write(f"🔹 **Probabilità {t2}:** {analysis['p2']:.1%}")
-                            st.divider()
-                            st.write(f"📈 **Quota Reale (Fair Odds):** {analysis['fair_o1']:.2f}")
-                            st.write(f"🏦 **Quota Bookmaker:** {o1:.2f}")
-
-        except Exception as e:
-            st.error(f"Errore tecnico nell'analisi: {e}")
+else:
+    st.info("Inserisci le quote sopra e clicca sul tasto per avviare l'intelligenza artificiale.")
