@@ -38,27 +38,35 @@ class NeuralEngine:
         if valore > 0.05: return f"🔥 VALORE RILEVATO: +{valore:.1%}", "#00ff00"
         return ("✅ ALTA PROBABILITÀ CASA", "#88ccff") if p1 > 0.60 else ("⚠️ RISCHIO / EQUILIBRIO", "#ffaa00")
 
-# --- 3. CSS "ULTRA CLEAN" (RIMOZIONE LOGHI E OVERLAY) ---
+# --- 3. CSS "TOTAL STEALTH" (RIMOZIONE COMPLETA BRANDING) ---
 st.markdown("""
     <style>
     /* Nasconde header, footer e menu principale */
-    #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
+    #MainMenu {visibility: hidden; display: none !important;}
+    header {visibility: hidden; display: none !important;}
+    footer {visibility: hidden; display: none !important;}
     
-    /* Rimuove il tasto 'Deploy' e 'Manage app' */
+    /* Rimuove i bottoni di sistema */
     .stAppDeployButton {display: none !important;}
     button[title="Manage app"] {display: none !important;}
     
-    /* Rimuove il logo Streamlit in basso a destra (Viewer Badge) */
+    /* NASCONDE IL LOGO "HOSTED BY STREAMLIT" E IL VIEWER BADGE */
+    div[data-testid="stStatusWidget"] {display: none !important;}
     .viewerBadge_container__1QSob {display: none !important;}
     .viewerBadge_link__1QSob {display: none !important;}
-    div[id="viewer-badge"] {display: none !important;}
-    div[data-testid="stStatusWidget"] {display: none !important;}
+    [data-testid="stDecoration"] {display: none !important;}
     
-    /* Toglie lo spazio bianco e i margini di sistema */
+    /* Selettore universale per nascondere il badge flottante in basso a destra */
+    div[id^="stCustomComponentToolbar"], 
+    div[class^="viewerBadge"], 
+    div[id="viewer-badge"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    /* Pulizia spazi bianchi */
     .block-container {
-        padding-top: 1.5rem;
+        padding-top: 1rem;
         padding-bottom: 0rem;
     }
 
