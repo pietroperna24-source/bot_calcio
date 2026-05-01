@@ -17,7 +17,7 @@ from datetime import datetime
 API_KEY = "ea1f03fb102749fa9140e20b184f2996" 
 BASE_URL = "https://api.football-data.org/v4/"
 
-# --- 2. DATABASE AVANZATO ---
+# --- 2. DATABASE E SICUREZZA ---
 def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
@@ -26,7 +26,7 @@ def init_db():
                   theme TEXT, created_at TEXT, status TEXT DEFAULT 'active', 
                   warnings INTEGER DEFAULT 0, avatar TEXT)''')
     
-    # Migrazioni automatiche
+    # Verifica e migrazione colonne mancanti
     cols = [column[1] for column in c.execute("PRAGMA table_info(users)")]
     updates = {
         "theme": "TEXT DEFAULT '#3b82f6'",
@@ -53,7 +53,7 @@ def save_bet_to_db():
         conn.commit()
         conn.close()
 
-# --- 3. UTILITY ---
+# --- 3. UTILITY GRAFICHE ---
 def img_to_base64(image):
     buffered = BytesIO()
     image.save(buffered, format="PNG")
@@ -73,7 +73,7 @@ def get_deep_analysis():
         "wet": random.choice(["Sereno 22°C", "Pioggia 14°C", "Nuvoloso 18°C"])
     }
 
-# --- 4. INIZIALIZZAZIONE ---
+# --- 4. INIZIALIZZAZIONE SESSIONE ---
 init_db()
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if 'user' not in st.session_state: st.session_state.user = ""
@@ -83,8 +83,8 @@ if 'theme_color' not in st.session_state: st.session_state.theme_color = "#3b82f
 if 'avatar_b64' not in st.session_state: st.session_state.avatar_b64 = None
 if 'last_selected' not in st.session_state: st.session_state.last_selected = None
 
-# --- 5. UI & STYLE ---
-st.set_page_config(page_title="NEURAL COMMANDER v23.5", layout="wide")
+# --- 5. UI & STILE LUXURY ---
+st.set_page_config(page_title="NEURAL COMMANDER v23.6", layout="wide")
 t_color = st.session_state.theme_color
 
 st.markdown(f"""
@@ -102,7 +102,7 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 6. ACCESSO ---
+# --- 6. ACCESSO (GATEKEEPER) ---
 if not st.session_state.logged_in:
     st.markdown(f"<h1 style='text-align:center; color:{t_color};'>🛡️ NEURAL COMMANDER</h1>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1.8, 1])
@@ -113,12 +113,12 @@ if not st.session_state.logged_in:
         p_in = st.text_input("Password", type="password")
         
         if mode == "Login":
-            if st.button("AUTENTICAZIONE", use_container_width=True):
+            if st.button("ACCEDI AL SISTEMA", use_container_width=True):
                 conn = sqlite3.connect('users.db'); c = conn.cursor()
                 c.execute('SELECT password, current_bet, theme, avatar, status FROM users WHERE username = ?', (u_in,))
                 data = c.fetchone(); conn.close()
                 if data:
-                    if data[4] == 'banned': st.error("🚫 ACCESSO NEGATO")
+                    if data[4] == 'banned': st.error("🚫 ACCESSO NEGATO: SEI STATO BANNATO")
                     elif data[0] == make_hashes(p_in):
                         st.session_state.logged_in = True
                         st.session_state.user = u_in
@@ -129,14 +129,14 @@ if not st.session_state.logged_in:
                     else: st.error("Password errata")
                 else: st.error("Utente non trovato")
         else:
-            if st.button("CREA ACCOUNT", use_container_width=True):
+            if st.button("CREA ACCOUNT NEURALE", use_container_width=True):
                 if u_in and p_in:
                     conn = sqlite3.connect('users.db'); c = conn.cursor()
                     try:
                         c.execute('INSERT INTO users(username, password, created_at) VALUES (?,?,?)', 
                                   (u_in, make_hashes(p_in), datetime.now().strftime("%d/%m/%Y")))
-                        conn.commit(); st.success("Registrato!")
-                    except: st.error("Username occupato")
+                        conn.commit(); st.success("Registrazione completata!")
+                    except: st.error("Errore: Nome utente già occupato")
                     conn.close()
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -148,20 +148,21 @@ else:
 
     # --- TAB ANALISI ---
     with t[0]:
+        st.markdown(f"<p style='color:{t_color}'>Operatore Attivo: <b>{st.session_state.user}</b></p>", unsafe_allow_html=True)
         c_l, c_r = st.columns(2)
         with c_l: league = st.selectbox("Lega", ["Serie A (SA)", "Premier League (PL)", "La Liga (PD)"])
         with c_r:
-            if st.button("🔄 SINCRONIZZA", use_container_width=True):
+            if st.button("🔄 SINCRONIZZA FEED API", use_container_width=True):
                 l_code = league.split("(")[1].replace(")", "")
                 res = requests.get(f"{BASE_URL}competitions/{l_code}/matches?status=SCHEDULED", headers={'X-Auth-Token': API_KEY})
                 if res.status_code == 200: st.session_state.matches = res.json().get('matches', [])
         
         matches = st.session_state.get('matches', [])
         if matches:
-            selected = st.selectbox("🎯 Target", ["---"] + [f"{m['homeTeam']['name']} vs {m['awayTeam']['name']}" for m in matches])
+            selected = st.selectbox("🎯 Target Match", ["---"] + [f"{m['homeTeam']['name']} vs {m['awayTeam']['name']}" for m in matches])
             if selected != "---":
                 if st.session_state.last_selected != selected:
-                    with st.status("🧬 Neural Scan...", expanded=True): time.sleep(0.8)
+                    with st.status("🧬 Neural Scan in corso...", expanded=True): time.sleep(0.8)
                     st.session_state.last_selected = selected
 
                 m_data = next(m for m in matches if f"{m['homeTeam']['name']} vs {m['awayTeam']['name']}" == selected)
@@ -177,13 +178,13 @@ else:
                 
                 with cm:
                     st.markdown('<div class="data-card" style="text-align:center;">', unsafe_allow_html=True)
-                    st.subheader("🎯 Neural Probabilities")
+                    st.subheader("🎯 Neural Odds Analysis")
                     cols = st.columns(3)
                     for i, lab in enumerate(['1', 'X', '2']):
                         q = 1/res['1X2'][i]
                         if cols[i].button(f"{lab} @ {q:.2f}", key=f"b_{i}", use_container_width=True):
                             st.session_state.schedina.append({"m": selected, "s": lab, "q": round(q, 2)})
-                            save_bet_to_db(); st.toast("Aggiunto!")
+                            save_bet_to_db(); st.toast("✅ Evento aggiunto!")
                     fig = go.Figure(data=go.Scatterpolar(r=res['RADAR'], theta=['Att','Dif','For','Fis','Tat'], fill='toself', line_color=t_color))
                     fig.update_layout(polar=dict(bgcolor='rgba(0,0,0,0)', radialaxis=dict(visible=False, range=[0, 100])), showlegend=False, height=220, paper_bgcolor='rgba(0,0,0,0)', margin=dict(t=20,b=20))
                     st.plotly_chart(fig, use_container_width=True)
@@ -193,17 +194,18 @@ else:
                     st.markdown('<div class="data-card">', unsafe_allow_html=True)
                     st.write("🚑 **Assenti Away**")
                     for p in res['a_abs']: st.markdown(f"<div class='absent-card'><b>{p['n']}</b><br>{p['r']}</div>", unsafe_allow_html=True)
-                    st.divider(); st.write("⚽ **Extra**")
+                    st.divider(); st.write("⚽ **Extra Markets**")
                     u, o = res['UO25']
                     if st.button(f"Over 2.5 @ {1/o:.2f}", use_container_width=True):
                         st.session_state.schedina.append({"m": selected, "s": "O2.5", "q": round(1/o, 2)})
-                        save_bet_to_db(); st.toast("✅ Aggiunto!")
+                        save_bet_to_db(); st.toast("✅ Over 2.5 aggiunto!")
                     st.markdown('</div>', unsafe_allow_html=True)
 
     # --- TAB SCHEDINA ---
     with t[1]:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
-        if not st.session_state.schedina: st.info("Vuota.")
+        st.subheader("📋 Schedina Permanente")
+        if not st.session_state.schedina: st.info("La tua schedina è attualmente vuota.")
         else:
             total = 1.0
             for i, bet in enumerate(st.session_state.schedina):
@@ -212,8 +214,8 @@ else:
                 if cd.button("🗑️", key=f"del_{i}"):
                     st.session_state.schedina.pop(i); save_bet_to_db(); st.rerun()
                 total *= bet['q']
-            st.metric("QUOTA", f"x {total:.2f}")
-            if st.button("SVUOTA", use_container_width=True): st.session_state.schedina = []; save_bet_to_db(); st.rerun()
+            st.metric("MOLTIPLICATORE TOTALE", f"x {total:.2f}")
+            if st.button("🗑️ SVUOTA SCHEDINA", use_container_width=True): st.session_state.schedina = []; save_bet_to_db(); st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
     # --- TAB ACCOUNT ---
@@ -221,22 +223,25 @@ else:
         cp, ci = st.columns([1, 2])
         with cp:
             st.markdown('<div class="data-card" style="text-align:center;">', unsafe_allow_html=True)
-            if st.session_state.avatar_b64: st.markdown(f'<img src="data:image/png;base64,{st.session_state.avatar_b64}" class="profile-pic">', unsafe_allow_html=True)
-            else: st.markdown(f'<div style="width:120px; height:120px; background:{t_color}22; border-radius:50%; margin:0 auto 15px; border:2px dashed {t_color}; display:flex; align-items:center; justify-content:center;">?</div>', unsafe_allow_html=True)
+            if st.session_state.avatar_b64: 
+                st.markdown(f'<img src="data:image/png;base64,{st.session_state.avatar_b64}" class="profile-pic">', unsafe_allow_html=True)
+            else: 
+                st.markdown(f'<div style="width:120px; height:120px; background:{t_color}22; border-radius:50%; margin:0 auto 15px; border:2px dashed {t_color}; display:flex; align-items:center; justify-content:center;">?</div>', unsafe_allow_html=True)
             st.subheader(st.session_state.user)
-            if st.button("🚪 LOGOUT", use_container_width=True, type="primary"): st.session_state.logged_in = False; st.rerun()
+            if st.button("🚪 ESCI (LOGOUT)", use_container_width=True, type="primary"): st.session_state.logged_in = False; st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
         with ci:
             st.markdown('<div class="data-card">', unsafe_allow_html=True)
-            up = st.file_uploader("Foto Profilo", type=["jpg", "png"])
-            if up and st.button("SALVA FOTO"):
+            st.subheader("🛠️ Personalizzazione Profilo")
+            up = st.file_uploader("Carica Foto Profilo", type=["jpg", "png"])
+            if up and st.button("AGGIORNA AVATAR"):
                 b64 = img_to_base64(Image.open(up).resize((300, 300)))
                 conn = sqlite3.connect('users.db'); c = conn.cursor()
                 c.execute("UPDATE users SET avatar = ? WHERE username = ?", (b64, st.session_state.user))
                 conn.commit(); conn.close(); st.session_state.avatar_b64 = b64; st.rerun()
             st.divider()
-            nc = st.color_picker("Tema", t_color)
-            if st.button("SALVA TEMA"):
+            nc = st.color_picker("Scegli Colore Tema", t_color)
+            if st.button("SALVA TEMA COLORE"):
                 st.session_state.theme_color = nc
                 conn = sqlite3.connect('users.db'); c = conn.cursor()
                 c.execute("UPDATE users SET theme = ? WHERE username = ?", (nc, st.session_state.user))
@@ -247,18 +252,20 @@ else:
     if st.session_state.user.lower() == "admin":
         with t[3]:
             st.markdown('<div class="data-card">', unsafe_allow_html=True)
+            st.subheader("👥 Pannello Gestione Utenti")
             conn = sqlite3.connect('users.db'); df = pd.read_sql_query("SELECT username, status, warnings FROM users", conn)
             for _, r in df.iterrows():
                 if r['username'].lower() == 'admin': continue
                 c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
                 c1.write(f"**{r['username']}**")
-                if c2.button("⚠️", key=f"w_{r['username']}"):
+                if c2.button("⚠️ Warn", key=f"w_{r['username']}"):
                     conn.execute("UPDATE users SET warnings = warnings + 1 WHERE username = ?", (r['username'],))
                     conn.commit(); st.rerun()
-                if c3.button("🚫" if r['status']=='active' else "✅", key=f"b_{r['username']}"):
-                    conn.execute("UPDATE users SET status = ? WHERE username = ?", ('banned' if r['status']=='active' else 'active', r['username']))
+                if c3.button("🚫 Ban" if r['status']=='active' else "✅ Unban", key=f"b_{r['username']}"):
+                    new_s = 'banned' if r['status']=='active' else 'active'
+                    conn.execute("UPDATE users SET status = ? WHERE username = ?", (new_s, r['username']))
                     conn.commit(); st.rerun()
-                if c4.button("🗑️", key=f"d_{r['username']}"):
+                if c4.button("🗑️ Del", key=f"d_{r['username']}"):
                     conn.execute("DELETE FROM users WHERE username = ?", (r['username'],))
                     conn.commit(); st.rerun()
             conn.close(); st.markdown('</div>', unsafe_allow_html=True)
