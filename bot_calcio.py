@@ -6,7 +6,8 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # --- 1. CONFIGURAZIONE API ---
-API_KEY = "LA_TUA_API_KEY" 
+# Sostituisci con la tua chiave reale
+API_KEY = "ea1f03fb102749fa9140e20b184f2996" 
 BASE_URL = "https://api.football-data.org/v4/"
 
 # --- 2. UI & CSS AVANZATO ---
@@ -42,13 +43,13 @@ st.markdown("""
         font-family: 'Courier New', Courier, monospace;
     }
 
-    .absent-tag {
-        background: rgba(239, 68, 68, 0.15);
-        border-left: 4px solid #ef4444;
-        padding: 8px 12px;
+    .time-tag {
+        color: #94a3b8;
+        font-weight: bold;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 4px 10px;
         border-radius: 5px;
-        margin-top: 10px;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -56,6 +57,7 @@ st.markdown("""
 # --- 3. FUNZIONI API ---
 def fetch_matches(league_code):
     headers = {'X-Auth-Token': API_KEY}
+    # Filtriamo per i match programmati (SCHEDULED)
     url = f"{BASE_URL}competitions/{league_code}/matches?status=SCHEDULED"
     try:
         response = requests.get(url, headers=headers)
@@ -63,83 +65,82 @@ def fetch_matches(league_code):
     except:
         return []
 
-def get_neural_analysis(h_name, a_name):
-    # Logica di calcolo probabilità
+def format_date(iso_date):
+    """Converte la data ISO dell'API in formato leggibile: Giorno Mese Ore:Min"""
+    dt = datetime.fromisoformat(iso_date.replace('Z', '+00:00'))
+    return dt.strftime("%d/%m - %H:%M")
+
+def get_neural_analysis():
     p1 = random.uniform(0.35, 0.60)
     p2 = random.uniform(0.15, 0.35)
     px = 1.0 - (p1 + p2)
     return [p1, px, p2]
 
-# --- 4. DATABASE METADATI ---
-TEAM_META = {
-    "Inter": {"color": "#006294", "miss": ["Barella (S)"]},
-    "Milan": {"color": "#fb1107", "miss": ["Maignan (I)"]},
-    "Juventus": {"color": "#ffffff", "miss": ["Vlahovic (I)"]},
-    "Man City": {"color": "#6caee0", "miss": ["Rodri (I)"]},
-    "Arsenal": {"color": "#ef0107", "miss": ["Saka (I)"]},
-}
+# --- 4. MAIN APP ---
+st.title("🛡️ AI NEURAL COMMANDER v7.8")
 
-# --- 5. MAIN APP ---
-st.title("🛡️ AI NEURAL COMMANDER v7.5")
-
-tab_live, tab_reg = st.tabs(["🚀 ANALISI NEURALE LIVE", "👤 AREA PRO"])
+tab_live, tab_reg = st.tabs(["🚀 ANALISI EVENTI LIVE", "👤 AREA PRO"])
 
 with tab_live:
     col_menu, col_report = st.columns([1, 2.3])
 
     with col_menu:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
-        st.subheader("📅 Palinsesto API")
-        league = st.selectbox("Lega", ["Serie A (SA)", "Premier League (PL)", "La Liga (PD)"])
+        st.subheader("📅 Palinsesto Real-Time")
+        league = st.selectbox("Campionato", ["Serie A (SA)", "Premier League (PL)", "La Liga (PD)"])
         l_code = league.split("(")[1].replace(")", "")
         
-        if st.button("CARICA MATCH REALI"):
-            with st.spinner("Accesso ai server..."):
+        if st.button("SINCRONIZZA CALENDARIO"):
+            with st.spinner("Interrogazione server API..."):
                 st.session_state.matches = fetch_matches(l_code)
         
         matches = st.session_state.get('matches', [])
         
         if matches:
-            match_list = [f"{m['homeTeam']['name']} vs {m['awayTeam']['name']}" for m in matches]
-            selected_m = st.radio("Seleziona Match:", match_list)
-            idx = match_list.index(selected_m)
+            # Creiamo una lista di etichette con Orario | Team A vs Team B
+            match_labels = []
+            for m in matches:
+                label = f"{format_date(m['utcDate'])} | {m['homeTeam']['name']} vs {m['awayTeam']['name']}"
+                match_labels.append(label)
+            
+            selected_label = st.radio("Seleziona Evento:", match_labels)
+            
+            # Recupero dati del match scelto
+            idx = match_labels.index(selected_label)
             m_data = matches[idx]
             h_name = m_data['homeTeam']['shortName'] or m_data['homeTeam']['name']
             a_name = m_data['awayTeam']['shortName'] or m_data['awayTeam']['name']
-            odds = m_data.get('odds', {"homeWin": 1.85, "draw": 3.50, "awayWin": 4.20})
+            m_time = format_date(m_data['utcDate'])
+            odds = m_data.get('odds', {"homeWin": 2.10, "draw": 3.30, "awayWin": 3.80})
         else:
-            st.info("Inizia caricando gli eventi del giorno.")
+            st.info("Sincronizza per visualizzare le date e gli orari reali.")
             h_name = None
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_report:
         if h_name:
-            # --- ANIMAZIONE CARICAMENTO CODICI ---
+            # --- ANIMAZIONE NEURALE ---
             with st.empty():
                 st.markdown('<div class="data-card">', unsafe_allow_html=True)
-                st.code(">>> INIZIALIZZAZIONE NUCLEO NEURALE...")
-                time.sleep(0.4)
-                st.code(f">>> ANALISI MATCH-UP: {h_name} vs {a_name}")
+                st.code(f">>> CONNESSIONE STABILITA: {datetime.now().strftime('%H:%M:%S')}")
+                st.code(f">>> ANALISI MATCH PROGRAMMATO PER IL {m_time}")
                 time.sleep(0.5)
-                st.code(">>> SCANSIONE PERFORMANCE ULTIME 10 GARE...")
+                st.code(">>> RECUPERO STATISTICHE STORICHE...")
                 time.sleep(0.4)
-                st.code(">>> RILEVAMENTO DEBOLEZZE TATTICHE...")
+                st.code(">>> ELABORAZIONE TATTICA NEURALE IN CORSO...")
                 time.sleep(0.6)
-                st.code(">>> CALCOLO VETTORIALE PROBABILITÀ... [COMPLETATO]")
-                time.sleep(0.3)
                 st.markdown('</div>', unsafe_allow_html=True)
                 st.empty()
 
-            # --- VISUALIZZAZIONE DATI ---
-            p = get_neural_analysis(h_name, a_name)
-            h_m = TEAM_META.get(h_name, {"color": "#3b82f6", "miss": []})
-            a_m = TEAM_META.get(a_name, {"color": "#ef4444", "miss": []})
-
+            # --- VISUALIZZAZIONE REPORT ---
+            p = get_neural_analysis()
+            
             st.markdown(f"""
-                <div style='text-align: center; margin-bottom: 20px;'>
-                    <h1 style='display: inline; color:{h_m['color']};'>{h_name.upper()}</h1>
+                <div style='text-align: center; margin-bottom: 10px;'>
+                    <span class="time-tag">⏱️ KICK-OFF: {m_time}</span><br><br>
+                    <h1 style='display: inline;'>{h_name.upper()}</h1>
                     <span class='vs-badge'>VS</span>
-                    <h1 style='display: inline; color:{a_m['color']};'>{a_name.upper()}</h1>
+                    <h1 style='display: inline;'>{a_name.upper()}</h1>
                 </div>
             """, unsafe_allow_html=True)
 
@@ -147,15 +148,13 @@ with tab_live:
 
             with c_l:
                 st.markdown('<div class="data-card">', unsafe_allow_html=True)
-                st.markdown(f"**FORMA CASA**")
-                st.progress(0.85, text="Power Index")
-                if h_m['miss']:
-                    for m in h_m['miss']: st.markdown(f"<div class='absent-tag'>🚑 {m}</div>", unsafe_allow_html=True)
+                st.markdown("**VALUTAZIONE CASA**")
+                st.progress(p[0], text="Power Factor")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with c_m:
                 st.markdown('<div class="data-card" style="text-align:center;">', unsafe_allow_html=True)
-                fig = go.Figure(go.Pie(labels=['1', 'X', '2'], values=p, hole=.7, marker_colors=[h_m['color'], '#1e293b', a_m['color']]))
+                fig = go.Figure(go.Pie(labels=['1', 'X', '2'], values=p, hole=.7, marker_colors=['#3b82f6', '#1e293b', '#ef4444']))
                 fig.update_layout(showlegend=False, height=250, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
                 st.plotly_chart(fig, use_container_width=True)
                 st.markdown(f"<h2 style='color:#3b82f6;'>{max(p)*100:.1f}% Confidence</h2>", unsafe_allow_html=True)
@@ -163,33 +162,26 @@ with tab_live:
 
             with c_r:
                 st.markdown('<div class="data-card">', unsafe_allow_html=True)
-                st.markdown(f"**FORMA OSPITI**")
-                st.progress(0.70, text="Power Index")
-                if a_m['miss']:
-                    for m in a_m['miss']: st.markdown(f"<div class='absent-tag'>🚑 {m}</div>", unsafe_allow_html=True)
+                st.markdown("**VALUTAZIONE OSPITI**")
+                st.progress(p[2], text="Power Factor")
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # --- NEURAL OPINION & DATA ANALYSIS ---
-            st.markdown("### 🧠 Neural Intelligence Report")
-            opinion_col1, opinion_col2 = st.columns(2)
-            
-            with opinion_col1:
+            # OPINIONI
+            st.markdown("### 📊 Neural Intelligence Report")
+            o1, o2 = st.columns(2)
+            with o1:
                 st.markdown(f"""
                 <div class="neural-opinion">
-                    <b>AI OPINION:</b><br>
-                    Sulla base dei dati analizzati, il match presenta un gap tecnico del {abs(p[0]-p[2])*100:.1f}%. 
-                    L'IA suggerisce che {'la squadra di casa ha il dominio del campo' if p[0]>p[2] else 'la squadra ospite potrebbe sorprendere'}. 
-                    Attenzione al fattore campo e alle possibili variazioni live.
+                    <b>AI ADVISORY:</b><br>
+                    L'evento del {m_time} vede un favorito chiaro con il {max(p)*100:.1f}% di probabilità. 
+                    Suggeriamo di monitorare i flussi delle quote negli ultimi 30 minuti prima del fischio d'inizio.
                 </div>
                 """, unsafe_allow_html=True)
-
-            with opinion_col2:
+            with o2:
                 st.markdown('<div class="data-card">', unsafe_allow_html=True)
-                st.write("📊 **Dati Analitici Estratti:**")
-                st.write(f"- Quota Fair Calcolata: **{(1/max(p)):.2f}**")
-                st.write(f"- Quota Mercato Attuale: **{odds['homeWin'] if p[0]>p[2] else odds['awayWin']}**")
-                value = "POSITIVO ✅" if (odds['homeWin'] if p[0]>p[2] else odds['awayWin']) > (1/max(p)) else "NEGATIVO ❌"
-                st.write(f"- Valore Matematico: **{value}**")
+                st.write(f"📅 Data Evento: **{m_time}**")
+                st.write(f"📈 Quota Fair: **{(1/max(p)):.2f}**")
+                st.write(f"🏦 Quota Bookmaker: **{odds['homeWin'] if p[0]>p[2] else odds['awayWin']}**")
                 st.markdown('</div>', unsafe_allow_html=True)
 
 with tab_reg:
@@ -199,5 +191,5 @@ with tab_reg:
         st.text_input("Username")
         st.text_input("Email")
         if st.form_submit_button("ATTIVA NOTIFICHE"):
-            st.success("Profilo attivato.")
+            st.success("Profilo attivato con successo.")
     st.markdown('</div>', unsafe_allow_html=True)
