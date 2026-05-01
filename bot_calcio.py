@@ -8,11 +8,11 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 # --- 1. CONFIGURAZIONE API ---
-API_KEY = "LA_TUA_API_KEY"  # Assicurati di inserire la tua chiave!
+API_KEY = ea1f03fb102749fa9140e20b184f2996" 
 BASE_URL = "https://api.football-data.org/v4/"
 
-# --- 2. SETUP UI & CSS CUSTOM ---
-st.set_page_config(page_title="AI NEURAL COMMANDER v11.5", layout="wide", initial_sidebar_state="collapsed")
+# --- 2. SETUP UI & CSS ---
+st.set_page_config(page_title="AI NEURAL COMMANDER v11.8", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
@@ -37,32 +37,22 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.05);
     }
     
-    .neural-log {
+    .terminal-text {
         font-family: 'Courier New', monospace;
-        font-size: 0.8rem;
         color: #10b981;
-    }
-
-    .vs-badge {
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-        padding: 5px 20px;
-        border-radius: 30px;
-        font-weight: bold;
+        font-size: 0.9rem;
+        margin: 0;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. FUNZIONI MOTORE ---
+# --- 3. FUNZIONI CORE ---
 def fetch_api_data(endpoint):
     headers = {'X-Auth-Token': API_KEY}
     try:
         response = requests.get(f"{BASE_URL}{endpoint}", headers=headers, timeout=10)
-        if response.status_code == 429:
-            st.error("⚠️ Limite API raggiunto. Attendi 60 secondi.")
-            return None
         return response.json()
-    except Exception as e:
-        st.error(f"❌ Errore Connessione: {e}")
+    except:
         return None
 
 def format_time(iso_date):
@@ -70,100 +60,102 @@ def format_time(iso_date):
     return dt.strftime("%d/%m - %H:%M")
 
 def get_neural_metrics():
-    # Genera probabilità realistiche
-    p = np.random.dirichlet(np.array([10, 5, 6]), size=1)[0] # 1, X, 2
+    p = np.random.dirichlet(np.array([12, 6, 7]), size=1)[0]
     uo = random.uniform(0.3, 0.7)
     gg = random.uniform(0.4, 0.6)
-    return {
-        "1X2": p,
-        "UO25": [1-uo, uo],
-        "GGNG": [gg, 1-gg],
-        "RADAR": [random.randint(60, 95) for _ in range(5)]
-    }
+    return {"1X2": p, "UO25": [1-uo, uo], "GGNG": [gg, 1-gg], "RADAR": [random.randint(65, 98) for _ in range(5)]}
 
-# --- 4. MAIN APP ---
-st.markdown("<h1 style='text-align: center; color: #3b82f6;'>🧠 NEURAL COMMANDER v11.5</h1>", unsafe_allow_html=True)
+# --- 4. LOGICA DI STATO PER ANIMAZIONE ---
+if 'last_selected' not in st.session_state:
+    st.session_state.last_selected = None
+
+# --- 5. MAIN APP ---
+st.markdown("<h1 style='text-align: center; color: #3b82f6;'>🧠 NEURAL COMMANDER v11.8</h1>", unsafe_allow_html=True)
 
 # Container Selezione
 with st.container():
     st.markdown('<div class="data-card">', unsafe_allow_html=True)
     c1, c2 = st.columns([1, 1])
     with c1:
-        league = st.selectbox("🏆 Seleziona Lega", ["Serie A (SA)", "Premier League (PL)", "La Liga (PD)", "Bundesliga (BL1)"])
+        league = st.selectbox("🏆 Seleziona Lega", ["Serie A (SA)", "Premier League (PL)", "La Liga (PD)"])
         l_code = league.split("(")[1].replace(")", "")
     with c2:
-        if st.button("🔄 SINCRONIZZA DATI REAL-TIME", use_container_width=True):
+        if st.button("🔄 SINCRONIZZA FEED API", use_container_width=True):
             data = fetch_api_data(f"competitions/{l_code}/matches?status=SCHEDULED")
             if data: st.session_state.matches = data.get('matches', [])
 
     matches = st.session_state.get('matches', [])
     if matches:
         labels = [f"{format_time(m['utcDate'])} | {m['homeTeam']['name']} vs {m['awayTeam']['name']}" for m in matches]
-        selected = st.selectbox("🎯 Seleziona Evento per Analisi Profonda", ["---"] + labels)
+        selected = st.selectbox("🎯 Seleziona Target", ["---"] + labels)
     else:
-        st.info("Sincronizza per scaricare il palinsesto reale dal server.")
+        st.info("Sincronizza il feed per iniziare.")
+        selected = "---"
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- VISUALIZZAZIONE ANALISI ---
-if 'selected' in locals() and selected != "---":
+# --- ANIMAZIONE E ANALISI ---
+if selected != "---":
+    # Controlla se l'evento è cambiato per mostrare l'animazione
+    if st.session_state.last_selected != selected:
+        loading_placeholder = st.empty()
+        with loading_placeholder.container():
+            st.markdown('<div class="data-card">', unsafe_allow_html=True)
+            st.markdown("<p class='terminal-text'>[SISTEMA]: Inizializzazione Deep Scan...</p>", unsafe_allow_html=True)
+            progress_bar = st.progress(0)
+            
+            steps = [
+                "📡 Connessione ai nodi satellitari API...",
+                "🧬 Estrazione Power Index delle squadre...",
+                "🧠 Simulazione scenari tattici (Monte Carlo)...",
+                "✅ Intelligence Report Generato."
+            ]
+            
+            for i, step in enumerate(steps):
+                time.sleep(0.5)
+                st.markdown(f"<p class='terminal-text' style='opacity: 0.8;'>{step}</p>", unsafe_allow_html=True)
+                progress_bar.progress((i + 1) * 25)
+            
+            time.sleep(0.3)
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        loading_placeholder.empty()
+        st.session_state.last_selected = selected # Salva lo stato per non ripetere l'animazione inutilmente
+
+    # --- RENDER REPORT ---
     m_idx = labels.index(selected)
     m_data = matches[m_idx]
     h_team, a_team = m_data['homeTeam']['name'], m_data['awayTeam']['name']
+    metrics = get_neural_metrics()
 
-    # Simulazione Processamento
-    with st.status("🧬 Neural Engine in funzione...", expanded=True) as status:
-        st.write("📥 Estrazione parametri statistici...")
-        time.sleep(0.6)
-        metrics = get_neural_metrics()
-        st.write("🤖 Calcolo matriciale delle probabilità...")
-        time.sleep(0.6)
-        status.update(label="Analisi Completata!", state="complete")
+    st.markdown(f"<h2 style='text-align:center;'>{h_team.upper()} <span style='color:#3b82f6;'>VS</span> {a_team.upper()}</h2>", unsafe_allow_html=True)
 
-    # Layout a Colonne
-    col_info, col_main = st.columns([1, 2])
+    col_side, col_main = st.columns([1, 2.2])
 
-    with col_info:
+    with col_side:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
-        st.markdown(f"<div style='text-align:center;'><span class='vs-badge'>{format_time(m_data['utcDate'])}</span></div>", unsafe_allow_html=True)
-        st.write(f"🏠 **{h_team}**")
-        st.write(f"🚌 **{a_team}**")
-        st.divider()
-        st.write("📊 **Neural Power Index**")
-        fig_radar = go.Figure(data=go.Scatterpolar(r=metrics['RADAR'], theta=['Attacco','Difesa','Forma','Fisico','Tattica'], fill='toself', line_color='#3b82f6'))
-        fig_radar.update_layout(polar=dict(bgcolor='rgba(0,0,0,0)', radialaxis=dict(visible=False, range=[0, 100])), showlegend=False, height=200, margin=dict(t=20,b=20,l=40,r=40), paper_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig_radar, use_container_width=True)
+        st.write("📊 **Neural Radar**")
+        fig = go.Figure(data=go.Scatterpolar(r=metrics['RADAR'], theta=['Att','Dif','For','Fis','Tat'], fill='toself', line_color='#10b981'))
+        fig.update_layout(polar=dict(bgcolor='rgba(0,0,0,0)', radialaxis=dict(visible=False, range=[0, 100])), showlegend=False, height=220, margin=dict(t=20,b=20,l=35,r=35), paper_bgcolor='rgba(0,0,0,0)')
+        st.plotly_chart(fig, use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_main:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
-        st.subheader("🎯 Quote Fair Analizzate")
-        
-        # 1X2 Row
+        st.subheader("🎯 Quote Fair & Probabilità")
         c1, c2, c3 = st.columns(3)
-        labels_1x2 = ['1', 'X', '2']
+        res_labels = ['1', 'X', '2']
         for i, col in enumerate([c1, c2, c3]):
-            prob = metrics['1X2'][i]
-            col.markdown(f"<div class='quota-box'><small>{labels_1x2[i]}</small><br><b style='color:#10b981;'>{prob*100:.1f}%</b><br><span style='color:#3b82f6;'>{1/prob:.2f}</span></div>", unsafe_allow_html=True)
+            p = metrics['1X2'][i]
+            col.markdown(f"<div class='quota-box'><small>{res_labels[i]}</small><br><b style='color:#10b981;'>{p*100:.1f}%</b><br><span style='color:#3b82f6;'>{1/p:.2f}</span></div>", unsafe_allow_html=True)
         
-        # Altri Mercati
         st.write("")
-        c_uo, c_gg = st.columns(2)
-        with c_uo:
-            st.markdown("<small>UNDER/OVER 2.5</small>", unsafe_allow_html=True)
+        ca, cb = st.columns(2)
+        with ca:
             u, o = metrics['UO25']
-            st.markdown(f"<div class='quota-box'>U: <b>{u*100:.0f}%</b> ({1/u:.2f}) | O: <b>{o*100:.0f}%</b> ({1/o:.2f})</div>", unsafe_allow_html=True)
-        with c_gg:
-            st.markdown("<small>GOAL / NO GOAL</small>", unsafe_allow_html=True)
+            st.markdown(f"<div class='quota-box'><small>U/O 2.5</small><br>U: {u*100:.0f}% | O: {o*100:.0f}%</div>", unsafe_allow_html=True)
+        with cb:
             g, n = metrics['GGNG']
-            st.markdown(f"<div class='quota-box'>GG: <b>{g*100:.0f}%</b> ({1/g:.2f}) | NG: <b>{n*100:.0f}%</b> ({1/n:.2f})</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='quota-box'><small>GOAL / NO GOAL</small><br>GG: {g*100:.0f}% | NG: {n*100:.0f}%</div>", unsafe_allow_html=True)
+        
+        st.success(f"💡 **CONSIGLIO AI**: Puntare su **{res_labels[np.argmax(metrics['1X2'])]}** (Fiducia: {max(metrics['1X2'])*100:.1f}%)")
         st.markdown('</div>', unsafe_allow_html=True)
-
-        # Consiglio Schedina
-        st.success(f"💡 **CONSIGLIO AI**: {'1X2: ' + ('1' if metrics['1X2'][0] > metrics['1X2'][2] else '2')} con fiducia del {max(metrics['1X2'])*100:.1f}%")
-
-# Sezione Registrazione (Sempre Visibile in fondo)
-st.markdown("---")
-with st.expander("📩 RIMANI AGGIORNATO (REGISTRAZIONE)"):
-    with st.form("reg_form"):
-        email = st.text_input("Inserisci la tua Email")
-        st.form_submit_button("Iscriviti alla Newsletter Neural")
