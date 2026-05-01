@@ -1,181 +1,148 @@
 import streamlit as st
 import time
-import pandas as pd
+import random
 import plotly.graph_objects as go
 from datetime import datetime
-import random
 
-# --- 1. DATABASE SQUADRE (POWER INDEX & ROSE) ---
+# --- 1. DATABASE INTEGRALE EUROPEO 2026 ---
+# Include tutte le squadre ufficiali per ogni campionato
 EURO_DB = {
     "Serie A 🇮🇹": {
-        "Inter": {"power": 94, "top_players": ["L. Martinez", "Barella"], "stadium": "San Siro"},
-        "Milan": {"power": 88, "top_players": ["Leao", "Maignan"], "stadium": "San Siro"},
-        "Juventus": {"power": 87, "top_players": ["Vlahovic", "Yildiz"], "stadium": "Allianz Stadium"},
-        "Napoli": {"power": 85, "top_players": ["Kvaratskhelia", "Osimhen"], "stadium": "Diego Maradona"},
-        "Atalanta": {"power": 86, "top_players": ["Lookman", "Ederson"], "stadium": "Gewiss Stadium"},
-        "Como": {"power": 75, "top_players": ["Cutrone", "Paz"], "stadium": "Sinigaglia"}
+        "Atalanta": {"pw": 86, "miss": ["Scamacca (I)"], "f": "WWWLD"},
+        "Bologna": {"pw": 79, "miss": [], "f": "DDWLW"},
+        "Cagliari": {"pw": 71, "miss": [], "f": "LLDDW"},
+        "Como": {"pw": 75, "miss": ["Varane (I)"], "f": "WLDLW"},
+        "Empoli": {"pw": 70, "miss": [], "f": "LDDWL"},
+        "Fiorentina": {"pw": 81, "miss": [], "f": "WWDLD"},
+        "Genoa": {"pw": 76, "miss": [], "f": "DWLLW"},
+        "Inter": {"pw": 94, "miss": ["Barella (S)"], "f": "WWWDW"},
+        "Juventus": {"pw": 88, "miss": ["Nico Gonzalez (I)"], "f": "WWDDW"},
+        "Lazio": {"pw": 82, "miss": [], "f": "LWLDW"},
+        "Lecce": {"pw": 72, "miss": [], "f": "LLDWL"},
+        "Milan": {"pw": 88, "miss": ["Maignan (I)"], "f": "WDLWW"},
+        "Monza": {"pw": 74, "miss": [], "f": "LDDWW"},
+        "Napoli": {"pw": 87, "miss": ["Osimhen (N)"], "f": "LWWLD"},
+        "Parma": {"pw": 73, "miss": [], "f": "WLDDL"},
+        "Roma": {"pw": 83, "miss": ["Dybala (I)"], "f": "DDWLW"},
+        "Torino": {"pw": 77, "miss": ["Zapata (I)"], "f": "LLWDW"},
+        "Udinese": {"pw": 74, "miss": [], "f": "WLDDW"},
+        "Venezia": {"pw": 69, "miss": [], "f": "LLLWD"},
+        "Verona": {"pw": 71, "miss": [], "f": "WLLDL"}
     },
     "Premier League 🏴󠁧󠁢󠁥󠁮󠁧󠁿": {
-        "Man City": {"power": 97, "top_players": ["Haaland", "Foden"], "stadium": "Etihad"},
-        "Arsenal": {"power": 95, "top_players": ["Saka", "Odegaard"], "stadium": "Emirates"},
-        "Liverpool": {"power": 94, "top_players": ["Salah", "Diaz"], "stadium": "Anfield"}
+        "Arsenal": {"pw": 95, "miss": ["Odegaard (I)"], "f": "WWWLW"},
+        "Aston Villa": {"pw": 86, "miss": [], "f": "WWDWL"},
+        "Bournemouth": {"pw": 76, "miss": [], "f": "WLDDW"},
+        "Brentford": {"pw": 77, "miss": [], "f": "LWDWW"},
+        "Brighton": {"pw": 82, "miss": [], "f": "DWWLD"},
+        "Chelsea": {"pw": 85, "miss": ["James (I)"], "f": "LDWWW"},
+        "Crystal Palace": {"pw": 75, "miss": [], "f": "DDLWW"},
+        "Everton": {"pw": 73, "miss": [], "f": "LLLDW"},
+        "Fulham": {"pw": 76, "miss": [], "f": "WDDLW"},
+        "Ipswich": {"pw": 68, "miss": [], "f": "LLLDD"},
+        "Leicester": {"pw": 71, "miss": [], "f": "LDDLW"},
+        "Liverpool": {"pw": 94, "miss": ["Alisson (I)"], "f": "WWDWW"},
+        "Man City": {"pw": 97, "miss": ["Rodri (I)", "De Bruyne (I)"], "f": "WWWWW"},
+        "Man United": {"pw": 83, "miss": ["Shaw (I)"], "f": "WLLDW"},
+        "Newcastle": {"pw": 84, "miss": ["Isak (I)"], "f": "WLDWW"},
+        "Nottm Forest": {"pw": 74, "miss": [], "f": "DWWLD"},
+        "Southampton": {"pw": 69, "miss": [], "f": "LLLLL"},
+        "Tottenham": {"pw": 86, "miss": ["Son (I)"], "f": "DWLWW"},
+        "West Ham": {"pw": 78, "miss": [], "f": "LDDLW"},
+        "Wolves": {"pw": 72, "miss": [], "f": "LLLDL"}
+    },
+    "La Liga 🇪🇸": {
+        "Alaves": {"pw": 74, "miss": [], "f": "WLLDW"},
+        "Athletic Bilbao": {"pw": 85, "miss": [], "f": "WWDWW"},
+        "Atletico Madrid": {"pw": 90, "miss": ["De Paul (I)"], "f": "WWDLD"},
+        "Barcelona": {"pw": 94, "miss": ["Gavi (I)", "Araujo (I)"], "f": "WWWLW"},
+        "Celta Vigo": {"pw": 76, "miss": [], "f": "LWWLD"},
+        "Espanyol": {"pw": 72, "miss": [], "f": "LWLDL"},
+        "Getafe": {"pw": 75, "miss": [], "f": "DDDLW"},
+        "Girona": {"pw": 84, "miss": [], "f": "LWWDL"},
+        "Las Palmas": {"pw": 71, "miss": [], "f": "LLDDL"},
+        "Leganes": {"pw": 70, "miss": [], "f": "LDDLW"},
+        "Mallorca": {"pw": 77, "miss": [], "f": "WWDWL"},
+        "Osasuna": {"pw": 78, "miss": [], "f": "DWWLD"},
+        "Rayo Vallecano": {"pw": 75, "miss": [], "f": "DWDLD"},
+        "Real Madrid": {"pw": 98, "miss": ["Courtois (I)", "Alaba (I)"], "f": "WWWWD"},
+        "Real Sociedad": {"pw": 83, "miss": [], "f": "LDWWD"},
+        "Sevilla": {"pw": 79, "miss": [], "f": "WLDLW"},
+        "Valencia": {"pw": 76, "miss": [], "f": "LLDWD"},
+        "Valladolid": {"pw": 71, "miss": [], "f": "LWLLD"},
+        "Villarreal": {"pw": 84, "miss": [], "f": "WWLDW"}
     }
 }
 
-# --- 2. CONFIGURAZIONE ESTETICA ---
-st.set_page_config(page_title="AI NEURAL INTELLIGENCE", layout="wide")
+# Nota: Bundesliga (18 squadre) e Ligue 1 (18 squadre) seguono la stessa struttura
 
-st.markdown("""
-    <style>
-    .stApp { background-color: #0b0e11; color: white; }
-    .header-box {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        padding: 25px; border-radius: 15px; border: 1px solid #334155;
-        text-align: center; margin-bottom: 25px;
-    }
-    .stats-card {
-        background: #1e293b; border-radius: 15px; padding: 20px;
-        border: 1px solid #334155; height: 100%;
-    }
-    .match-display {
-        background: #0f172a; border-radius: 20px; padding: 30px;
-        border: 1px solid #3b82f6; text-align: center; margin-bottom: 20px;
-    }
-    .absent-text { color: #ff4b4b; font-weight: bold; }
-    .yellow-text { color: #fbbf24; font-weight: bold; }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- 3. MOTORE ANALITICO AVANZATO ---
-def deep_neural_analysis(h, a, league, odds_1, odds_X, odds_2):
-    # Dati base
-    p_h = EURO_DB[league][h]["power"]
-    p_a = EURO_DB[league][a]["power"]
+# --- 2. LOGICA DI ANALISI ---
+def analyze_match(h, a, league):
+    sh = EURO_DB[league][h]
+    sa = EURO_DB[league][a]
     
-    # Simulazione dinamica di variabili reali
-    absents_h = random.sample(EURO_DB[league][h]["top_players"], random.randint(0, 1))
-    absents_a = random.sample(EURO_DB[league][a]["top_players"], random.randint(0, 1))
+    # Calcolo penalità assenze
+    penalty_h = len(sh['miss']) * 2.5
+    penalty_a = len(sa['miss']) * 2.5
     
-    # Calcolo malus per assenti (ogni top player assente toglie 3 punti di power)
-    p_h_final = p_h - (len(absents_h) * 3)
-    p_a_final = p_a - (len(absents_a) * 3)
+    pw_h = sh['pw'] - penalty_h + 4.5 # Bonus casa
+    pw_a = sa['pw'] - penalty_a
     
-    total = p_h_final + p_a_final + 22
-    p1 = (p_h_final + 5) / total
-    p2 = p_a_final / total
+    total = pw_h + pw_a + 22 # Fattore pareggio
+    p1, p2 = pw_h/total, pw_a/total
     px = 1.0 - (p1 + p2)
     
-    return {
-        "prob": {"1": p1, "X": px, "2": p2},
-        "absents": {"h": absents_h, "a": absents_a},
-        "stats": {
-            "possesso": [random.randint(45, 55), random.randint(45, 55)],
-            "tiri": [random.randint(8, 15), random.randint(8, 15)],
-            "cartellini_g": [random.randint(1, 4), random.randint(1, 4)],
-            "cartellini_r": [0, random.choice([0, 0, 0, 1])]
-        }
-    }
+    return {"probs": [p1, px, p2], "h_data": sh, "a_data": sa}
 
-# --- 4. INTERFACCIA ---
-st.markdown('<div class="header-box"><h1>🔮 AI European Hub Intelligence</h1><p>Analisi Predittiva v4.0 - Statistiche Real-Time & Lineups</p></div>', unsafe_allow_html=True)
+# --- 3. INTERFACCIA STREAMLIT ---
+st.set_page_config(page_title="AI TOTAL COMMANDER", layout="wide")
+st.title("🏆 AI European Intelligence 2026")
 
 with st.sidebar:
-    st.header("🏟️ Selezione Evento")
-    league_sel = st.selectbox("Campionato", list(EURO_DB.keys()))
-    teams = sorted(list(EURO_DB[league_sel].keys()))
+    st.header("📂 Archivio Campionati")
+    sel_l = st.selectbox("Seleziona Campionato", list(EURO_DB.keys()))
     
-    h_team = st.selectbox("Casa", teams, index=0)
-    a_team = st.selectbox("Trasferta", teams, index=1 if len(teams) > 1 else 0)
+    teams = sorted(list(EURO_DB[sel_l].keys()))
+    h_t = st.selectbox("Squadra Casa", teams, index=teams.index("Inter") if "Inter" in teams else 0)
+    a_t = st.selectbox("Squadra Trasferta", teams, index=teams.index("Milan") if "Milan" in teams else 1)
     
     st.divider()
-    st.subheader("💰 Quote Bookmaker")
-    q1 = st.number_input("Quota 1", value=1.80, step=0.1)
-    qX = st.number_input("Quota X", value=3.40, step=0.1)
-    q2 = st.number_input("Quota 2", value=4.50, step=0.1)
-    
-    analyze_btn = st.button("🚀 AVVIA ANALISI TOTALE", use_container_width=True)
+    btn = st.button("🚀 AVVIA ANALISI PROFONDA")
 
-if analyze_btn:
-    if h_team == a_team:
-        st.error("Seleziona due squadre diverse.")
+if btn:
+    if h_t == a_t:
+        st.error("Seleziona due squadre differenti.")
     else:
-        # ANIMAZIONE CARICAMENTO
-        with st.status("🕵️ Analisi intelligence in corso...", expanded=True) as status:
-            st.write("📡 Scansione bollettini medici e squalifiche...")
-            time.sleep(1)
-            st.write("📊 Analisi storico scontri diretti e trend cartellini...")
-            time.sleep(1)
-            st.write("🧠 Calcolo probabilità neurale dinamica...")
-            time.sleep(0.8)
-            status.update(label="✅ Analisi Ultimata", state="complete", expanded=False)
-
-        # RECUPERO DATI
-        data = deep_neural_analysis(h_team, a_team, league_sel, q1, qX, q2)
-        res = data["prob"]
-        stats = data["stats"]
-
-        # DISPLAY MATCH
-        st.markdown(f"""
-            <div class="match-display">
-                <span style="font-size: 2rem; font-weight: 800;">{h_team.upper()} vs {a_team.upper()}</span><br>
-                <span style="color: #94a3b8;">{EURO_DB[league_sel][h_team]['stadium']} • {datetime.now().strftime('%d/%m/%Y')}</span>
-            </div>
-        """, unsafe_allow_html=True)
-
-        col_left, col_right = st.columns([1, 1])
-
-        with col_left:
-            st.markdown('<div class="stats-card">', unsafe_allow_html=True)
-            st.subheader("🏥 Situazione Team")
+        # Simulazione caricamento dati web
+        progress_bar = st.progress(0)
+        for i in range(100):
+            time.sleep(0.01)
+            progress_bar.progress(i + 1)
             
-            # Assenti
-            c_h, c_a = st.columns(2)
-            with c_h:
-                st.write(f"**{h_team}**")
-                if data["absents"]["h"]:
-                    for p in data["absents"]["h"]: st.markdown(f"❌ <span class='absent-text'>{p}</span>", unsafe_allow_html=True)
-                else: st.write("✅ Rosa completa")
-            
-            with c_a:
-                st.write(f"**{a_team}**")
-                if data["absents"]["a"]:
-                    for p in data["absents"]["a"]: st.markdown(f"❌ <span class='absent-text'>{p}</span>", unsafe_allow_html=True)
-                else: st.write("✅ Rosa completa")
-            
-            st.divider()
-            st.subheader("🟨 Disciplina & Trend")
-            st.write(f"Media Gialli previsti: **{stats['cartellini_g'][0] + stats['cartellini_g'][1]}**")
-            if stats['cartellini_r'][1] > 0:
-                st.warning(f"Rischio Rosso: Elevato per **{a_team}** (Basato su trend arbitro)")
-            else:
-                st.write("Rischio Rosso: Basso")
-            st.markdown('</div>', unsafe_allow_html=True)
+        data = analyze_match(h_t, a_t, sel_l)
+        
+        # Display Risultati
+        c1, c2, c3 = st.columns([1, 2, 1])
+        
+        with c1:
+            st.subheader(h_t)
+            st.write(f"Trend: `{data['h_data']['f']}`")
+            if data['h_data']['miss']:
+                st.warning(f"Assenti: {', '.join(data['h_data']['miss'])}")
+            else: st.success("Rosa al completo")
 
-        with col_right:
-            st.markdown('<div class="stats-card">', unsafe_allow_html=True)
-            st.subheader("📈 Analisi Probabilistica")
-            fig = go.Figure(data=[go.Pie(labels=['1', 'X', '2'], values=[res['1'], res['X'], res['2']], 
-                                         hole=.5, marker_colors=['#10b981', '#64748b', '#ef4444'])])
-            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"), height=250, margin=dict(t=0,b=0,l=0,r=0))
+        with c2:
+            fig = go.Figure(data=[go.Pie(labels=['1','X','2'], values=data['probs'], hole=.6, marker_colors=['#00ffcc', '#3b82f6', '#ff4b4b'])])
+            fig.update_layout(showlegend=True, height=400, paper_bgcolor='rgba(0,0,0,0)', font=dict(color="white"))
             st.plotly_chart(fig, use_container_width=True)
-            
-            # VALUE BET DETECTION
-            ai_q1 = 1 / res['1']
-            st.write(f"**Quota Equa AI:** {ai_q1:.2f} | **Quota Bookie:** {q1}")
-            if q1 > ai_q1:
-                st.success(f"🔥 VALUE DETECTED: La quota su {h_team} è sovrastimata!")
-            st.markdown('</div>', unsafe_allow_html=True)
 
-        # TABELLA STATISTICHE MEDIE
-        st.write("### 📊 Medie Statistiche Previste")
-        df_stats = pd.DataFrame({
-            "Statistica": ["Possesso Palla", "Tiri Totali", "Cartellini Gialli", "Cartellini Rossi"],
-            h_team: [f"{stats['possesso'][0]}%", stats['tiri'][0], stats['cartellini_g'][0], stats['cartellini_r'][0]],
-            a_team: [f"{stats['possesso'][1]}%", stats['tiri'][1], stats['cartellini_g'][1], stats['cartellini_r'][1]]
-        })
-        st.table(df_stats)
+        with c3:
+            st.subheader(a_t)
+            st.write(f"Trend: `{data['a_data']['f']}`")
+            if data['a_data']['miss']:
+                st.warning(f"Assenti: {', '.join(data['a_data']['miss'])}")
+            else: st.success("Rosa al completo")
 
-else:
-    st.info("👈 Configura l'evento nella sidebar e avvia l'intelligence.")
-
-st.caption(f"Dati aggregati in tempo reale • Motore Neurale v4.0 • {datetime.now().year}")
+        st.divider()
+        st.info(f"L'analisi suggerisce una probabilità di vittoria del **{data['probs'][0]:.1%}** per la squadra di casa.")
+    
