@@ -12,7 +12,7 @@ API_KEY = "ea1f03fb102749fa9140e20b184f2996"
 BASE_URL = "https://api.football-data.org/v4/"
 
 # --- 2. SETUP UI & CSS ---
-st.set_page_config(page_title="AI NEURAL COMMANDER v13.0", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="AI NEURAL COMMANDER v13.5", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown("""
     <style>
@@ -29,33 +29,39 @@ st.markdown("""
         backdrop-filter: blur(12px);
     }
     
-    .schedina-card {
-        background: rgba(59, 130, 246, 0.1);
-        border: 1px dashed #3b82f6;
-        border-radius: 15px;
-        padding: 15px;
-    }
-
-    .quota-button {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
+    .terminal-text { font-family: 'Courier New', monospace; color: #10b981; font-size: 0.85rem; margin: 0; }
+    
+    .quota-box {
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
         padding: 10px;
         text-align: center;
-        cursor: pointer;
-        transition: 0.3s;
+        border: 1px solid rgba(255, 255, 255, 0.05);
     }
-    .quota-button:hover { border-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+
+    .absent-card {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        padding: 8px;
+        border-radius: 10px;
+        margin-top: 5px;
+        font-size: 0.8rem;
+    }
+
+    .sidebar-bet {
+        background: rgba(59, 130, 246, 0.1);
+        border-left: 3px solid #3b82f6;
+        padding: 10px;
+        margin-bottom: 8px;
+        border-radius: 0 10px 10px 0;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. INIZIALIZZAZIONE SESSION STATE (SCHEDINA) ---
-if 'schedina' not in st.session_state:
-    st.session_state.schedina = []
-if 'matches' not in st.session_state:
-    st.session_state.matches = []
-if 'last_selected' not in st.session_state:
-    st.session_state.last_selected = None
+# --- 3. INIZIALIZZAZIONE STATO ---
+if 'schedina' not in st.session_state: st.session_state.schedina = []
+if 'matches' not in st.session_state: st.session_state.matches = []
+if 'last_selected' not in st.session_state: st.session_state.last_selected = None
 
 # --- 4. FUNZIONI CORE ---
 def fetch_api_data(endpoint):
@@ -71,46 +77,44 @@ def format_time(iso_date):
 
 def get_deep_analysis():
     p = np.random.dirichlet(np.array([12, 6, 7]), size=1)[0]
+    uo = random.uniform(0.3, 0.7)
+    gg = random.uniform(0.4, 0.6)
+    players = ["M. Rossi", "L. Moretti", "G. Esposito", "A. Ricci", "D. Bianchi"]
+    reasons = ["Infortunio", "Squalifica", "Dubbio"]
     return {
-        "1X2": p,
-        "UO25": [random.uniform(0.3, 0.7), random.uniform(0.3, 0.7)],
-        "RADAR": [random.randint(65, 98) for _ in range(5)]
+        "1X2": p, "UO25": [1-uo, uo], "GGNG": [gg, 1-gg],
+        "RADAR": [random.randint(65, 98) for _ in range(5)],
+        "h_abs": [{"n": random.choice(players), "r": random.choice(reasons)} for _ in range(random.randint(0,2))],
+        "a_abs": [{"n": random.choice(players), "r": random.choice(reasons)} for _ in range(random.randint(0,2))],
+        "ref": random.choice(["D. Orsato", "M. Oliver", "S. Marciniak"]),
+        "wet": random.choice(["Sereno 22°C", "Pioggia 14°C", "Nuvoloso 18°C"])
     }
 
-# --- 5. MAIN APP ---
-st.markdown("<h1 style='text-align: center; color: #3b82f6;'>🧠 NEURAL COMMANDER v13.0</h1>", unsafe_allow_html=True)
-
-# Sidebar Schedina (Visualizzazione su Mobile in alto o basso)
+# --- 5. SIDEBAR SCHEDINA ---
 with st.sidebar:
-    st.header("📋 La Tua Schedina")
+    st.title("📋 Bet Slip")
     if not st.session_state.schedina:
-        st.write("Nessun evento selezionato.")
+        st.info("La tua schedina è vuota.")
     else:
-        moltiplicatore = 1.0
+        total_odd = 1.0
         for i, bet in enumerate(st.session_state.schedina):
-            st.markdown(f"""
-            <div style="background:rgba(255,255,255,0.05); padding:10px; border-radius:10px; margin-bottom:5px;">
-                <small>{bet['match']}</small><br>
-                <b>{bet['segno']}</b> @ {bet['quota']:.2f}
-            </div>
-            """, unsafe_allow_html=True)
-            moltiplicatore *= bet['quota']
-        
+            st.markdown(f"""<div class="sidebar-bet"><small>{bet['m']}</small><br><b>{bet['s']}</b> @ {bet['q']:.2f}</div>""", unsafe_allow_html=True)
+            total_odd *= bet['q']
         st.divider()
-        st.subheader(f"Totale: {moltiplicatore:.2f}")
-        if st.button("Svuota Schedina"):
+        st.metric("Moltiplicatore Totale", f"x {total_odd:.2f}")
+        if st.button("🗑️ Svuota Schedina", use_container_width=True):
             st.session_state.schedina = []
             st.rerun()
 
-# Layout Principale
-col_main, col_spacer = st.columns([3, 0.1])
+# --- 6. MAIN APP ---
+st.markdown("<h1 style='text-align: center; color: #3b82f6;'>🧠 NEURAL COMMANDER v13.5</h1>", unsafe_allow_html=True)
 
-with col_main:
-    # Selezione Evento
+# Selezione Evento
+with st.container():
     st.markdown('<div class="data-card">', unsafe_allow_html=True)
-    c1, c2 = st.columns(2)
+    c1, c2 = st.columns([1, 1])
     with c1:
-        league = st.selectbox("🏆 Campionato", ["Serie A (SA)", "Premier League (PL)", "La Liga (PD)"])
+        league = st.selectbox("🏆 Lega", ["Serie A (SA)", "Premier League (PL)", "La Liga (PD)"])
         l_code = league.split("(")[1].replace(")", "")
     with c2:
         if st.button("🔄 SINCRONIZZA FEED API", use_container_width=True):
@@ -120,53 +124,75 @@ with col_main:
     matches = st.session_state.get('matches', [])
     if matches:
         labels = [f"{format_time(m['utcDate'])} | {m['homeTeam']['name']} vs {m['awayTeam']['name']}" for m in matches]
-        selected = st.selectbox("🎯 Analizza e Scommetti", ["---"] + labels)
+        selected = st.selectbox("🎯 Seleziona Target", ["---"] + labels)
     else:
-        st.info("Sincronizza per caricare i match.")
+        st.info("Sincronizza il feed per iniziare.")
         selected = "---"
     st.markdown('</div>', unsafe_allow_html=True)
 
-    if selected != "---":
-        # Gestione Animazione
-        if st.session_state.last_selected != selected:
-            with st.status("🧬 Deep Scanning...", expanded=True):
-                time.sleep(1.0)
-            st.session_state.last_selected = selected
+# --- ANALISI E RENDERING ---
+if selected != "---":
+    if st.session_state.last_selected != selected:
+        loading_placeholder = st.empty()
+        with loading_placeholder.container():
+            st.markdown('<div class="data-card">', unsafe_allow_html=True)
+            st.markdown("<p class='terminal-text'>[SISTEMA]: Avvio Scansione Neurale v13.5...</p>", unsafe_allow_html=True)
+            pb = st.progress(0)
+            steps = ["📡 Link Satellitare...", "🧬 Analisi Power Index...", "🚑 Controllo Infermeria...", "🧠 Simulazione Match...", "✅ Pronto."]
+            for i, s in enumerate(steps):
+                time.sleep(0.4)
+                st.markdown(f"<p class='terminal-text' style='opacity:0.7;'>{s}</p>", unsafe_allow_html=True)
+                pb.progress((i+1)*20)
+            st.markdown('</div>', unsafe_allow_html=True)
+        loading_placeholder.empty()
+        st.session_state.last_selected = selected
 
-        m_idx = labels.index(selected)
-        m_data = matches[m_idx]
-        h_name, a_name = m_data['homeTeam']['name'], m_data['awayTeam']['name']
-        analysis = get_deep_analysis()
+    # Dati Analisi
+    m_data = matches[labels.index(selected)]
+    h_n, a_n = m_data['homeTeam']['name'], m_data['awayTeam']['name']
+    res = get_deep_analysis()
 
-        # Render Analisi
-        st.markdown(f"<h2 style='text-align:center;'>{h_team if 'h_team' in locals() else h_name} vs {a_team if 'a_team' in locals() else a_name}</h2>", unsafe_allow_html=True)
-        
+    st.markdown(f"<h2 style='text-align:center;'>{h_n.upper()} vs {a_n.upper()}</h2>", unsafe_allow_html=True)
+
+    # Griglia Principale
+    col_l, col_m, col_r = st.columns([1, 1.5, 1])
+
+    with col_l:
         st.markdown('<div class="data-card">', unsafe_allow_html=True)
-        st.subheader("🎯 Seleziona l'esito da salvare:")
-        
-        c1, c2, c3 = st.columns(3)
-        res_labs = ['1', 'X', '2']
-        
-        for i, col in enumerate([c1, c2, c3]):
-            prob = analysis['1X2'][i]
-            quota = 1/prob
-            with col:
-                if st.button(f"{res_labs[i]} @ {quota:.2f}", key=f"bet_{i}", use_container_width=True):
-                    new_bet = {
-                        "match": f"{h_name}-{a_name}",
-                        "segno": res_labs[i],
-                        "quota": quota
-                    }
-                    st.session_state.schedina.append(new_bet)
-                    st.success(f"Aggiunto: {res_labs[i]}")
-        
-        st.write("")
-        st.info("💡 Consiglio AI: L'analisi suggerisce una quota fair di " + f"{1/max(analysis['1X2']):.2f}")
+        st.write("🚑 **Assenti Home**")
+        if not res['h_abs']: st.write("✅ Nessuno")
+        for p in res['h_abs']: st.markdown(f"<div class='absent-card'><b>{p['n']}</b><br>{p['r']}</div>", unsafe_allow_html=True)
+        st.divider()
+        st.write(f"⚖️ {res['ref']}")
+        st.write(f"☁️ {res['wet']}")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Radar Chart Dettagli
-        st.markdown('<div class="data-card">', unsafe_allow_html=True)
-        fig = go.Figure(data=go.Scatterpolar(r=analysis['RADAR'], theta=['Att','Dif','For','Fis','Tat'], fill='toself', line_color='#3b82f6'))
-        fig.update_layout(polar=dict(bgcolor='rgba(0,0,0,0)', radialaxis=dict(visible=False, range=[0, 100])), showlegend=False, height=250, paper_bgcolor='rgba(0,0,0,0)')
+    with col_m:
+        st.markdown('<div class="data-card" style="text-align:center;">', unsafe_allow_html=True)
+        st.subheader("🎯 Neural Odds")
+        c1, c2, c3 = st.columns(3)
+        labs = ['1', 'X', '2']
+        for i, col in enumerate([c1, c2, c3]):
+            q = 1/res['1X2'][i]
+            with col:
+                if st.button(f"{labs[i]} @ {q:.2f}", key=f"btn_{i}", use_container_width=True):
+                    st.session_state.schedina.append({"m": f"{h_n}-{a_n}", "s": labs[i], "q": q})
+                    st.toast(f"Aggiunto {labs[i]} alla schedina!")
+        
+        fig = go.Figure(data=go.Scatterpolar(r=res['RADAR'], theta=['Att','Dif','For','Fis','Tat'], fill='toself', line_color='#10b981'))
+        fig.update_layout(polar=dict(bgcolor='rgba(0,0,0,0)', radialaxis=dict(visible=False, range=[0, 100])), showlegend=False, height=200, margin=dict(t=20,b=20,l=35,r=35), paper_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig, use_container_width=True)
+        st.success(f"💡 AI Suggest: {labs[np.argmax(res['1X2'])]}")
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with col_r:
+        st.markdown('<div class="data-card">', unsafe_allow_html=True)
+        st.write("🚑 **Assenti Away**")
+        if not res['a_abs']: st.write("✅ Nessuno")
+        for p in res['a_abs']: st.markdown(f"<div class='absent-card'><b>{p['n']}</b><br>{p['r']}</div>", unsafe_allow_html=True)
+        st.divider()
+        st.write("⚽ **Extra Markets**")
+        u, o = res['UO25']
+        if st.button(f"U 2.5 @ {1/u:.2f}", use_container_width=True): st.session_state.schedina.append({"m": f"{h_n}-{a_n}", "s": "Under 2.5", "q": 1/u})
+        if st.button(f"O 2.5 @ {1/o:.2f}", use_container_width=True): st.session_state.schedina.append({"m": f"{h_n}-{a_n}", "s": "Over 2.5", "q": 1/o})
         st.markdown('</div>', unsafe_allow_html=True)
